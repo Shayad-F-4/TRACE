@@ -1,187 +1,32 @@
-import { useEffect, useState, type ReactNode } from "react";
-import {
-  AlertTriangle,
-  BellRing,
-  Gauge,
-  Map as MapIcon,
-  Menu,
-  Radar,
-  RadioTower,
-  ScrollText,
-  Search,
-  ShieldAlert,
-  Cpu,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-import { useKavach } from "@/lib/kavach/store";
-
-export type SectionKey =
-  | "command"
-  | "map"
-  | "nodes"
-  | "detections"
-  | "alerts"
-  | "logs"
-  | "system";
-
-export const SECTIONS: { key: SectionKey; label: string; icon: ReactNode }[] = [
-  { key: "command", label: "Command Center", icon: <Gauge className="h-4 w-4" /> },
-  { key: "map", label: "Live Map", icon: <MapIcon className="h-4 w-4" /> },
-  { key: "nodes", label: "Sensor Nodes", icon: <RadioTower className="h-4 w-4" /> },
-  { key: "detections", label: "Detections", icon: <Search className="h-4 w-4" /> },
-  { key: "alerts", label: "Alerts", icon: <BellRing className="h-4 w-4" /> },
-  { key: "logs", label: "Data Logs", icon: <ScrollText className="h-4 w-4" /> },
-  { key: "system", label: "System Info", icon: <Cpu className="h-4 w-4" /> },
-];
-
-function Clock() {
-  const [now, setNow] = useState<string>("--:--:--");
-  useEffect(() => {
-    const f = () => setNow(new Date().toLocaleTimeString("en-GB", { hour12: false }));
-    f();
-    const t = setInterval(f, 1000);
-    return () => clearInterval(t);
-  }, []);
-  return <span className="mono-num text-sm">{now} IST</span>;
-}
-
-export function TopBar({ onMenu }: { onMenu: () => void }) {
-  const k = useKavach();
-  const unack = k.alerts.filter((a) => !a.acknowledged && a.severity === "critical").length;
-  const online = k.nodes.filter((n) => n.status !== "offline").length;
-
-  return (
-    <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-2.5">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu}>
-        <Menu />
-      </Button>
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground">
-          <Radar className="h-5 w-5" />
-        </span>
-        <div className="leading-tight">
-          <p className="text-base font-semibold tracking-tight">KAVACH</p>
-          <p className="text-[11px] text-muted-foreground">Rescue Command Center</p>
-        </div>
-      </div>
-
-      <div className="ml-auto flex flex-wrap items-center gap-3">
-        <span className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs">
-          <span
-            className={cn(
-              "h-2 w-2 rounded-full",
-              k.running ? "animate-pulse bg-success" : "bg-muted-foreground",
-            )}
-          />
-          {k.running ? `Link active · ${online}/4 nodes` : "Link idle"}
-        </span>
-
-        <label className="flex items-center gap-2 rounded-md border border-border px-2 py-1 text-xs">
-          <span className={k.mode === "simulation" ? "font-semibold" : "text-muted-foreground"}>
-            SIM
-          </span>
-          <Switch
-            checked={k.mode === "live"}
-            onCheckedChange={(v) => k.setMode(v ? "live" : "simulation")}
-            aria-label="Toggle simulation or live mode"
-          />
-          <span className={k.mode === "live" ? "font-semibold" : "text-muted-foreground"}>
-            LIVE
-          </span>
-        </label>
-
-        <Clock />
-
-        <Badge
-          variant="outline"
-          className={cn(
-            "gap-1",
-            unack
-              ? "border-critical/40 bg-critical/10 text-critical"
-              : "border-success/40 bg-success/10 text-success",
-          )}
-        >
-          {unack ? <ShieldAlert className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-          {unack ? `EMERGENCY · ${unack} critical` : "STATUS NOMINAL"}
-        </Badge>
-      </div>
-    </header>
-  );
-}
-
-export function Sidebar({
-  active,
-  onSelect,
-  open,
-  onClose,
-}: {
-  active: SectionKey;
-  onSelect: (k: SectionKey) => void;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const k = useKavach();
-  const counts: Partial<Record<SectionKey, number>> = {
-    alerts: k.alerts.filter((a) => !a.acknowledged).length,
-    detections: k.detections.length,
-  };
-
-  return (
-    <>
-      {open && (
-        <button
-          aria-label="Close navigation"
-          className="fixed inset-0 z-30 bg-foreground/40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full",
-        )}
-      >
-        <div className="border-b border-sidebar-border px-4 py-4">
-          <p className="text-sm font-semibold tracking-wide">KAVACH</p>
-          <p className="text-[11px] text-sidebar-foreground/70">
-            Multi-sensor survivor detection & LoRa mesh
-          </p>
-        </div>
-        <nav className="flex-1 space-y-1 p-3">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.key}
-              onClick={() => {
-                onSelect(s.key);
-                onClose();
-              }}
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-                active === s.key
-                  ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60",
-              )}
-            >
-              {s.icon}
-              <span className="flex-1 text-left">{s.label}</span>
-              {counts[s.key] ? (
-                <span className="mono-num rounded bg-sidebar-primary px-1.5 text-[10px] text-sidebar-primary-foreground">
-                  {counts[s.key]}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </nav>
-        <div className="border-t border-sidebar-border p-3 text-[11px] text-sidebar-foreground/70">
-          <p className="font-medium text-sidebar-foreground">Prototype / Research Demonstration</p>
-          <p className="mt-1">
-            Estimates probable search zones from supporting evidence. Not a certified rescue system.
-          </p>
-        </div>
-      </aside>
-    </>
-  );
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { Activity, Bell, ChevronDown, ChevronLeft, Cpu, FileCode2, FileText, Gauge, GitBranch, Map, Menu, RadioTower, Radar, ScrollText, Settings2, Shield, Siren, TestTube2, Wifi, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useKavach } from '@/lib/kavach/store';
+import { cn } from '@/lib/utils';
+export const NAV = [ ['/', 'Command Overview',Gauge], ['/map','Live Tactical Map',Map], ['/incidents','Incidents',Siren], ['/detections','Signal Detections',Radar], ['/nodes','Sensor Nodes',RadioTower], ['/gateway','Gateway',Wifi], ['/topology','Network Topology',GitBranch], ['/simulation','Simulation Lab',TestTube2], ['/analytics','Analytics',Activity], ['/logs','Event Logs',ScrollText], ['/reports','Reports',FileText], ['/hardware','Hardware Integration',Cpu], ['/api-docs','API Docs',FileCode2], ['/health','System Health',Shield], ['/settings','Settings',Settings2] ] as const;
+function Clock(){const [time,setTime]=useState('--:--:--');useEffect(()=>{const update=()=>setTime(new Date().toLocaleTimeString('en-GB'));update();const t=setInterval(update,1000);return()=>clearInterval(t);},[]);return <span className="mono-num text-xs">{time}<span className="ml-1 text-muted-foreground">LOCAL</span></span>;}
+export function TraceShell({children}:{children:ReactNode}){
+ const k=useKavach();const [open,setOpen]=useState(false);const [collapsed,setCollapsed]=useState(false);const [notices,setNotices]=useState(false);const [profile,setProfile]=useState(false);const path=useRouterState({select:s=>s.location.pathname});
+ useEffect(()=>setOpen(false),[path]);
+ const count=k.alerts.filter(a=>!a.acknowledged).length;
+ return <div className="min-h-screen bg-background flex">
+ {open&&<Button variant="ghost" aria-label="Close navigation backdrop" className="fixed inset-0 z-40 h-full w-full bg-background/80 lg:hidden" onClick={()=>setOpen(false)}/>}
+ <aside className={cn('fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar transition-all',collapsed?'lg:w-[76px]':'lg:w-[232px]','w-[232px]',open?'translate-x-0':'-translate-x-full lg:translate-x-0')}>
+  <div className="h-[84px] flex items-center gap-3 px-5 border-b border-border"><span className="text-primary"><Radar size={30}/></span><div className={collapsed?'lg:hidden':''}><p className="font-display text-2xl font-semibold">TRACE<span className="text-primary">.</span></p><p className="trace-label text-[8px]">RESCUE COMMAND PLATFORM</p></div><Button variant="ghost" size="icon" aria-label="Close navigation" className="lg:hidden ml-auto" onClick={()=>setOpen(false)}><X/></Button></div>
+  <nav className="flex-1 overflow-y-auto trace-scroll px-3 py-5"><p className={cn('trace-label mb-3 px-3',collapsed&&'lg:hidden')}>OPERATIONS</p>{NAV.map(([to,label,Icon],i)=><div key={to}>{i===7&&<p className={cn('trace-label mt-6 mb-3 px-3',collapsed&&'lg:hidden')}>INTELLIGENCE & SYSTEM</p>}<Button asChild variant="ghost" className={cn('w-full justify-start mb-1 h-9 text-xs px-3',path===to?'border border-primary/20 bg-sidebar-accent text-primary':'text-muted-foreground',collapsed&&'lg:justify-center lg:px-0')} title={label}><Link to={to}><Icon className="shrink-0"/><span className={cn('truncate',collapsed&&'lg:hidden')}>{label}</span>{to==='/detections'&&k.detections.length>0&&!collapsed&&<span className="ml-auto text-[9px] mono-num text-primary">{k.detections.length}</span>}</Link></Button></div>)}</nav>
+  <div className="border-t border-border p-4"><div className={collapsed?'lg:hidden':''}><p className="flex items-center gap-2 text-[11px]"><span className="h-1.5 w-1.5 rounded-full bg-warning"/>RESEARCH PROTOTYPE</p><p className="text-[10px] text-muted-foreground mt-2">Sanjivani College of Engineering<br/>Kopargaon, Maharashtra</p></div><Button variant="ghost" size="icon" title="Collapse sidebar" aria-label="Collapse sidebar" className="hidden lg:flex mt-2" onClick={()=>setCollapsed(v=>!v)}><ChevronLeft className={collapsed?'rotate-180':''}/></Button></div>
+ </aside>
+ <div className={cn('min-w-0 flex-1 transition-all',collapsed?'lg:ml-[76px]':'lg:ml-[232px]')}>
+  <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 min-h-[64px] border-b border-border bg-background/95 backdrop-blur px-4 lg:px-7 no-print">
+   <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" onClick={()=>setOpen(true)}><Menu/></Button>
+   <div className="hidden sm:block"><p className="trace-label text-[8px]">ACTIVE INCIDENT</p><select aria-label="Active incident" value={k.incidentId} onChange={e=>k.selectIncident(e.target.value)} className="bg-transparent text-xs max-w-52 outline-none py-1">{k.incidents.map(i=><option key={i.id} value={i.id} className="bg-card">{i.name}</option>)}</select></div>
+   <div className="ml-auto flex flex-wrap items-center gap-3 text-[10px]"><select aria-label="Data mode" value={k.mode} onChange={e=>k.setMode(e.target.value as 'live'|'simulation')} className="rounded border border-warning/35 bg-warning/10 text-warning px-2 py-1.5 mono-num"><option value="simulation" className="bg-card">SIMULATION</option><option value="live" className="bg-card">LIVE HARDWARE</option></select><span className="hidden xl:flex items-center gap-1.5 text-muted-foreground"><span className="h-1.5 w-1.5 bg-muted-foreground rounded-full"/>Backend {k.apiStatus==='Not configured'?'local only':k.apiStatus}</span><span className={cn('hidden md:flex items-center gap-1.5',k.gatewayConnected?'text-success':'text-critical')}><span className={cn('h-1.5 w-1.5 rounded-full node-ring',k.gatewayConnected?'bg-success':'bg-critical')}/>{k.mode==='simulation'?'Sim gateway':'Gateway'} {k.gatewayConnected?'online':'disconnected'}</span><div className="hidden xl:block"><Clock/></div><Button variant="ghost" size="icon" aria-label="Notifications" title="Notifications" className="relative" onClick={()=>setNotices(v=>!v)}><Bell/>{count>0&&<span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-warning text-primary-foreground text-[9px]">{count}</span>}</Button><Button variant="ghost" size="sm" aria-label="Operator profile" onClick={()=>setProfile(v=>!v)}><span className="w-7 h-7 grid place-items-center bg-secondary border border-border rounded-full text-xs">OP</span><ChevronDown className="hidden sm:block"/></Button></div>
+   {notices&&<div className="absolute top-full right-5 w-72 max-w-[90vw] rounded border border-border bg-card p-4 shadow-xl event-arrival"><p className="font-semibold text-sm mb-2">Notifications</p>{k.alerts.length?k.alerts.slice(0,4).map(a=><div key={a.id} className="border-t border-border py-2 text-xs"><p>{a.title}</p><p className="text-muted-foreground mt-1">{a.reason}</p>{!a.acknowledged&&<Button variant="link" size="sm" onClick={()=>k.acknowledge(a.id)}>Acknowledge</Button>}</div>):<p className="text-xs text-muted-foreground">No unacknowledged alerts.</p>}<Button asChild variant="outline" size="sm" className="mt-3"><Link to="/alerts">View all alerts</Link></Button></div>}
+   {profile&&<div className="absolute right-5 top-full border border-border rounded bg-card p-4 text-xs event-arrival"><strong>Demo operator</strong><p className="mt-2 text-muted-foreground">Local session · no account connected</p><Button asChild variant="link" size="sm"><Link to="/settings">Session settings</Link></Button></div>}
+  </header>
+  <main key={path} className="p-4 lg:p-7 fade-in-up">{children}</main>
+  <footer className="px-4 lg:px-7 pb-4 flex flex-wrap justify-between gap-2 trace-label text-[9px] no-print"><span>TRACE / Triangulated Rescue Aid via Crowd-Signal Estimation</span><span className="text-warning">RESEARCH PROTOTYPE · {k.mode==='simulation'?'SYNTHETIC DATA':'HARDWARE MODE'}</span></footer>
+ </div>
+ </div>;
 }

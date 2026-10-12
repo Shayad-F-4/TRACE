@@ -1,4 +1,4 @@
-export type NodeId = "N01" | "N02" | "N03" | "N04";
+export type NodeId = string;
 
 export type NodeStatus = "online" | "degraded" | "offline";
 
@@ -20,6 +20,11 @@ export interface SensorNode {
   lastPacket: number; // epoch ms
   sensorHealth: Record<string, "ok" | "warn" | "fail">;
   hops: number; // mesh hops to gateway
+  type?: "sniffer" | "gateway";
+  firmware?: string;
+  uptime?: number;
+  packetsReceived?: number;
+  packetsLost?: number;
 }
 
 export type SignalType = "BLE" | "Wi-Fi";
@@ -57,6 +62,8 @@ export interface SearchZone {
   evidence: EvidenceBreakdown;
   contributingNodes: NodeId[];
   note: string;
+  confidence?: number;
+  residual?: number;
 }
 
 export type AlertKind = "zone" | "anomaly" | "node";

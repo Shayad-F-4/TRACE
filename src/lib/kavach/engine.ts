@@ -62,6 +62,8 @@ export interface LocalizationInput {
   lat: number;
   lon: number;
   rssi: number;
+  age?: number;
+  variance?: number;
 }
 
 export interface LocalizationResult {
@@ -70,6 +72,7 @@ export interface LocalizationResult {
   radius: number;
   residual: number;
   nodes: NodeId[];
+  confidence: number;
 }
 
 /**
@@ -82,12 +85,13 @@ export function localize(
   observations: LocalizationInput[],
   cal: CalibrationSettings,
 ): LocalizationResult | null {
-  if (observations.length < 3) return null;
+  observations = observations.filter((o) => Number.isFinite(o.rssi) && (o.age ?? 0) < 60);
+  if (new Set(observations.map((o) => o.nodeId)).size < 3) return null;
 
   const ranges = observations.map((o) => ({
     ...o,
     d: rssiToDistance(o.rssi, cal),
-    w: clamp((o.rssi + 100) / 60, 0.15, 1), // -100 dBm -> weak, -40 dBm -> strong
+    w: clamp((o.rssi + 120) / 80, 0.15, 1) / (1 + (o.variance ?? 0) / 9 + (o.age ?? 0) / 15),
   }));
 
   const lat0 = ranges.reduce((s, r) => s + r.lat, 0) / ranges.length;
@@ -108,9 +112,10 @@ export function localize(
   let span = 260; // metres
   for (let pass = 0; pass < 5; pass++) {
     const step = span / 8;
+    const centre = { ...best };
     for (let iy = -8; iy <= 8; iy++) {
       for (let ix = -8; ix <= 8; ix++) {
-        const p = offsetMetres(best, ix * step, iy * step);
+        const p = offsetMetres(centre, ix * step, iy * step);
         const c = cost(p.lat, p.lon);
         if (c < best.cost) best = { lat: p.lat, lon: p.lon, cost: c };
       }
@@ -118,9 +123,16 @@ export function localize(
     span = span / 3;
   }
 
-  const geometryPenalty = 1 + Math.max(0, 4 - observations.length) * 0.25;
+  const xs = observations.map((o) => (o.lon - lon0) * mPerDegLon(lat0));
+  const ys = observations.map((o) => (o.lat - lat0) * M_PER_DEG_LAT);
+  const xx = xs.reduce((s, x) => s + x*x, 0);
+  const yy = ys.reduce((s, y) => s + y*y, 0);
+  const xy = xs.reduce((s, x, i) => s + x * (ys[i] ?? 0), 0);
+  const geometry = clamp(4 * (xx*yy - xy*xy) / Math.max(1, (xx + yy)**2), 0, 1);
+  const uncertainty = observations.reduce((s, o) => s + Math.sqrt(o.variance ?? 0) * 2 + (o.age ?? 0), 0) / observations.length;
+  const geometryPenalty = 1 + (1 - geometry) * 2 + Math.max(0, 4 - observations.length) * 0.15;
   const radius = clamp(
-    (6 + best.cost * 1.4) * geometryPenalty,
+    (8 + best.cost * 1.4 + uncertainty) * geometryPenalty,
     cal.minRadius,
     cal.maxRadius,
   );
@@ -131,6 +143,7 @@ export function localize(
     radius,
     residual: best.cost,
     nodes: observations.map((o) => o.nodeId),
+    confidence: Math.round(clamp(90 - best.cost * 0.7 - uncertainty - (1 - geometry) * 35, 5, 90)),
   };
 }
 

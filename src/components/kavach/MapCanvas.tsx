@@ -1,248 +1,41 @@
-import { useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { M_PER_DEG_LAT, mPerDegLon, rssiToDistance } from "@/lib/kavach/engine";
-import { SITE_ORIGIN } from "@/lib/kavach/store";
-import type { CalibrationSettings, SearchZone, SensorNode } from "@/lib/kavach/types";
-
-const HALF_SPAN = 260; // metres from site origin to map edge
-
-interface Props {
-  nodes: SensorNode[];
-  zones: SearchZone[];
-  calibration: CalibrationSettings;
-  selectedNode?: string | null;
-  onSelectNode?: (id: string) => void;
-  className?: string;
-}
-
-export function MapCanvas({
-  nodes,
-  zones,
-  calibration,
-  selectedNode,
-  onSelectNode,
-  className,
-}: Props) {
-  const project = useMemo(() => {
-    const mLon = mPerDegLon(SITE_ORIGIN.lat);
-    return (lat: number, lon: number) => {
-      const east = (lon - SITE_ORIGIN.lon) * mLon;
-      const north = (lat - SITE_ORIGIN.lat) * M_PER_DEG_LAT;
-      return {
-        x: 500 + (east / HALF_SPAN) * 500,
-        y: 500 - (north / HALF_SPAN) * 500,
-      };
-    };
-  }, []);
-
-  const toPx = (m: number) => (m / HALF_SPAN) * 500;
-
-  return (
-    <div className={cn("relative overflow-hidden rounded-md bg-map-surface", className)}>
-      <svg viewBox="0 0 1000 1000" className="h-full w-full" role="img" aria-label="Search area map">
-        <defs>
-          <pattern id="kv-grid" width="50" height="50" patternUnits="userSpaceOnUse">
-            <path d="M50 0H0V50" fill="none" stroke="var(--grid-line)" strokeWidth="1" />
-          </pattern>
-          <radialGradient id="kv-zone" cx="50%" cy="50%">
-            <stop offset="0%" stopColor="var(--critical)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--critical)" stopOpacity="0.06" />
-          </radialGradient>
-          <radialGradient id="kv-zone-low" cx="50%" cy="50%">
-            <stop offset="0%" stopColor="var(--warning)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="var(--warning)" stopOpacity="0.05" />
-          </radialGradient>
-        </defs>
-
-        <rect width="1000" height="1000" fill="url(#kv-grid)" />
-
-        {/* rubble / structure footprints for context */}
-        <g fill="var(--accent)" opacity="0.75" stroke="var(--border)">
-          <polygon points="380,330 640,300 690,470 420,520" />
-          <polygon points="250,600 470,580 500,720 280,760" />
-          <polygon points="620,600 800,640 770,780 600,740" />
-        </g>
-        <g
-          fontSize="16"
-          fill="var(--muted-foreground)"
-          fontFamily="ui-monospace, monospace"
-        >
-          <text x="400" y="420">COLLAPSED BLOCK A</text>
-          <text x="270" y="670">DEBRIS FIELD B</text>
-          <text x="630" y="700">SLAB C</text>
-        </g>
-
-        {/* coverage circles */}
-        {nodes.map((n) => {
-          const p = project(n.lat, n.lon);
-          if (n.status === "offline") return null;
-          return (
-            <circle
-              key={`cov-${n.id}`}
-              cx={p.x}
-              cy={p.y}
-              r={toPx(120)}
-              fill="var(--success)"
-              fillOpacity="0.05"
-              stroke="var(--success)"
-              strokeOpacity="0.28"
-              strokeDasharray="6 6"
-            />
-          );
-        })}
-
-        {/* estimated signal-distance circles from latest RSSI */}
-        {nodes.map((n) => {
-          if (n.status === "offline" || n.rssi < -99) return null;
-          const p = project(n.lat, n.lon);
-          return (
-            <circle
-              key={`rng-${n.id}`}
-              cx={p.x}
-              cy={p.y}
-              r={toPx(rssiToDistance(n.rssi, calibration))}
-              fill="none"
-              stroke="var(--info)"
-              strokeOpacity="0.6"
-              strokeWidth="1.5"
-              strokeDasharray="3 5"
-            />
-          );
-        })}
-
-        {/* mesh links */}
-        {nodes
-          .filter((n) => n.status !== "offline" && n.id !== "N04")
-          .map((n) => {
-            const gw = nodes.find((x) => x.id === "N04");
-            if (!gw) return null;
-            const a = project(n.lat, n.lon);
-            const b = project(gw.lat, gw.lon);
-            return (
-              <line
-                key={`link-${n.id}`}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                stroke="var(--primary)"
-                strokeOpacity="0.3"
-                strokeWidth="2"
-                strokeDasharray="10 8"
-              />
-            );
-          })}
-
-        {/* probable search zones */}
-        {zones.slice(0, 3).map((z, i) => {
-          const p = project(z.lat, z.lon);
-          const r = Math.max(18, toPx(z.radius));
-          const high = z.priority === "HIGH";
-          return (
-            <g key={z.id} opacity={i === 0 ? 1 : 0.55}>
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r={r}
-                fill={high ? "url(#kv-zone)" : "url(#kv-zone-low)"}
-                stroke={high ? "var(--critical)" : "var(--warning)"}
-                strokeWidth="2.5"
-                strokeDasharray="8 6"
-              />
-              <circle cx={p.x} cy={p.y} r="6" fill={high ? "var(--critical)" : "var(--warning)"} />
-              <text
-                x={p.x + r + 8}
-                y={p.y - 4}
-                fontSize="17"
-                fontWeight="700"
-                fill={high ? "var(--critical)" : "var(--warning)"}
-              >
-                {z.priority} · {z.score}/100
-              </text>
-              <text x={p.x + r + 8} y={p.y + 16} fontSize="15" fill="var(--muted-foreground)">
-                probable zone ±{z.radius} m
-              </text>
-            </g>
-          );
-        })}
-
-        {/* nodes */}
-        {nodes.map((n) => {
-          const p = project(n.lat, n.lon);
-          const color =
-            n.status === "offline"
-              ? "var(--critical)"
-              : n.status === "degraded"
-                ? "var(--warning)"
-                : "var(--primary)";
-          const selected = selectedNode === n.id;
-          return (
-            <g
-              key={n.id}
-              onClick={() => onSelectNode?.(n.id)}
-              className={onSelectNode ? "cursor-pointer" : undefined}
-            >
-              {selected && (
-                <circle cx={p.x} cy={p.y} r="30" fill="none" stroke={color} strokeWidth="2" />
-              )}
-              <rect
-                x={p.x - 17}
-                y={p.y - 17}
-                width="34"
-                height="34"
-                rx="8"
-                fill={color}
-                stroke="var(--card)"
-                strokeWidth="3"
-              />
-              <text
-                x={p.x}
-                y={p.y + 6}
-                fontSize="16"
-                fontWeight="700"
-                textAnchor="middle"
-                fill="var(--primary-foreground)"
-                fontFamily="ui-monospace, monospace"
-              >
-                {n.id.slice(1)}
-              </text>
-              <text
-                x={p.x}
-                y={p.y + 40}
-                fontSize="16"
-                textAnchor="middle"
-                fill="var(--foreground)"
-                fontFamily="ui-monospace, monospace"
-              >
-                {n.id} · {n.battery.toFixed(0)}%
-              </text>
-            </g>
-          );
-        })}
-
-        {/* scale bar */}
-        <g>
-          <line x1="60" y1="940" x2={60 + toPx(100)} y2="940" stroke="var(--foreground)" strokeWidth="3" />
-          <text x="60" y="928" fontSize="16" fill="var(--foreground)" fontFamily="ui-monospace, monospace">
-            100 m
-          </text>
-        </g>
-      </svg>
-
-      <div className="pointer-events-none absolute left-3 top-3 rounded border border-border bg-card/90 px-2 py-1 text-[11px] mono-num text-muted-foreground">
-        {SITE_ORIGIN.lat.toFixed(5)}°N, {SITE_ORIGIN.lon.toFixed(5)}°E · local grid projection
-      </div>
-      <div className="pointer-events-none absolute right-3 top-3 flex flex-col gap-1 rounded border border-border bg-card/90 px-2 py-1.5 text-[11px] text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm bg-primary" /> sensor node
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full border border-info" /> RSSI range estimate
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-critical" /> probable search zone
-        </span>
-      </div>
-    </div>
-  );
+import { useId, useRef, useState } from 'react';
+import { Crosshair, Layers, Minus, Plus, RotateCcw, RadioTower } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { M_PER_DEG_LAT, mPerDegLon, rssiToDistance } from '@/lib/kavach/engine';
+import { SITE_ORIGIN, useKavach } from '@/lib/kavach/store';
+import type { CalibrationSettings, SearchZone, SensorNode } from '@/lib/kavach/types';
+export const localXY=(n:{lat:number;lon:number})=>({x:(n.lon-SITE_ORIGIN.lon)*mPerDegLon(SITE_ORIGIN.lat),y:(n.lat-SITE_ORIGIN.lat)*M_PER_DEG_LAT});
+interface Props {nodes:SensorNode[];zones:SearchZone[];calibration:CalibrationSettings;selectedNode?:string|null;onSelectNode?:(id:string)=>void;className?:string;editable?:boolean;showTruth?:boolean;onMoveSignal?:(x:number,y:number)=>void}
+export function MapCanvas({nodes,zones,calibration,selectedNode,onSelectNode,className,editable=false,showTruth=false,onMoveSignal}:Props){
+ const k=useKavach();const id=useId().replace(/:/g,'');const svg=useRef<SVGSVGElement>(null);const [zoom,setZoom]=useState(1);const [pan,setPan]=useState({x:0,y:0});const [layers,setLayers]=useState({links:true,ranges:false,zones:true});const [menu,setMenu]=useState(false);const [selectedZone,setSelectedZone]=useState<string|null>(null);
+ const drag=useRef<{id:string|null;x:number;y:number;px:number;py:number;startX:number;startY:number}|null>(null);
+ const p=(lat:number,lon:number)=>{const v=localXY({lat,lon});return{x:500+v.x*1.75,y:350-v.y*1.15};};
+ const eventPoint=(e:React.PointerEvent<SVGSVGElement>)=>{const el=svg.current;const matrix=el?.getScreenCTM();if(!el||!matrix)return null;return new DOMPoint(e.clientX,e.clientY).matrixTransform(matrix.inverse());};
+ const gateway=nodes.find(n=>n.type==='gateway'||n.id==='N04');const zone=zones.find(z=>z.id===selectedZone);
+ return <div className={cn('relative overflow-hidden rounded-md bg-map-surface',className)}>
+  <div className="absolute left-4 top-4 z-10"><p className="trace-label">LOCAL TACTICAL GRID / 520 × 520 M</p><p className="mt-1 flex items-center gap-2 text-xs"><span className="h-1.5 w-1.5 rounded-full bg-primary node-ring"/>{k.mode==='simulation'?'SIMULATED TELEMETRY':nodes.length?'HARDWARE TELEMETRY':'AWAITING HARDWARE'}</p></div>
+  <div className="absolute right-3 top-3 z-10 flex gap-1 bg-card/90 p-1 rounded-md border border-border">
+   <Button variant="ghost" size="icon" title="Zoom in" aria-label="Zoom in" onClick={()=>setZoom(v=>Math.min(3,v+.25))}><Plus/></Button><Button variant="ghost" size="icon" title="Zoom out" aria-label="Zoom out" onClick={()=>setZoom(v=>Math.max(.5,v-.25))}><Minus/></Button><Button variant="ghost" size="icon" title="Fit and reset map" aria-label="Fit and reset map" onClick={()=>{setZoom(1);setPan({x:0,y:0});}}><Crosshair/></Button><Button variant="ghost" size="icon" title="Map layers" aria-label="Map layers" onClick={()=>setMenu(v=>!v)}><Layers/></Button>
+  </div>
+  {menu&&<div className="absolute right-3 top-16 z-20 bg-card border border-border rounded-md p-3 space-y-2 text-xs">{Object.entries(layers).map(([key,v])=><label key={key} className="flex items-center gap-3 capitalize"><input type="checkbox" checked={v} onChange={e=>setLayers(l=>({...l,[key]:e.target.checked}))}/>{key}</label>)}</div>}
+  <svg ref={svg} viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" className="h-full w-full touch-none" role="img" aria-label="TRACE tactical map" onPointerDown={e=>{const point=eventPoint(e);if(!point)return;const marker=(e.target as Element).closest('[data-node]')?.getAttribute('data-node');const truth=(e.target as Element).closest('[data-truth]');drag.current={id:editable?(truth?'truth':marker??null):null,x:point.x,y:point.y,px:pan.x,py:pan.y,startX:e.clientX,startY:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{const d=drag.current;if(!d)return;const point=eventPoint(e);if(!point)return;if(d.id){const x=((point.x-500-pan.x)/zoom)/1.75;const y=-((point.y-350-pan.y)/zoom)/1.15;if(d.id==='truth')onMoveSignal?.(x,y);else k.moveNode(d.id,x,y);}else setPan({x:d.px+point.x-d.x,y:d.py+point.y-d.y});}} onPointerUp={e=>{const d=drag.current;drag.current=null;if(d&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)<5){const marker=(e.target as Element).closest('[data-node]')?.getAttribute('data-node');if(marker)onSelectNode?.(marker);}if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}}>
+   <defs><pattern id={`grid-${id}`} width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="var(--grid-line)" strokeWidth=".7"/></pattern><pattern id={`rubble-${id}`} width="12" height="12" patternUnits="userSpaceOnUse"><path d="M0 12L12 0" stroke="var(--border)" strokeWidth="1"/></pattern></defs>
+   <rect width="1000" height="700" fill={`url(#grid-${id})`}/>
+   <g transform={`translate(${500+pan.x} ${350+pan.y}) scale(${zoom}) translate(-500 -350)`}>
+   <g fill="none" stroke="var(--grid-line)" strokeWidth="1.2" opacity=".65">{[0,1,2,3,4,5].map(i=><path key={i} d={`M${100-i*25} ${250+i*28} C${240-i*30} ${90+i*35},${360+i*30} ${140+i*35},${400+i*45} ${250+i*38} S${660+i*30} ${530+i*20},${930+i*30} ${410+i*32}`}/>)}</g>
+   <g fill={`url(#rubble-${id})`} stroke="var(--border)" strokeWidth="2"><path d="M330 250L485 220L560 315L410 365Z"/><path d="M570 365L720 345L760 475L590 485Z"/><path d="M255 400L380 390L400 510L245 535Z"/></g>
+   <g fill="var(--muted-foreground)" fontSize="12" fontFamily="monospace"><text x="355" y="290">COLLAPSED STRUCTURE A</text><text x="595" y="427">DEBRIS FIELD B</text><text x="260" y="465">PARKING SLAB C</text></g>
+   <path d="M80 350H920 M500 60V640" stroke="var(--grid-line)" strokeDasharray="4 8"/>
+   {layers.links&&gateway&&nodes.filter(n=>n.id!==gateway.id).map(n=>{const a=p(n.lat,n.lon),b=p(gateway.lat,gateway.lon),ok=n.status!=='offline'&&k.gatewayConnected;return <g key={n.id}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={ok?'var(--primary)':'var(--critical)'} strokeOpacity=".28" strokeDasharray="4 5"/><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--primary)" strokeWidth="2" className={ok&&k.running?'packet-link':'hidden'}/><text x={(a.x+b.x)/2} y={(a.y+b.y)/2-6} fill="var(--muted-foreground)" fontSize="10" fontFamily="monospace">{ok?`${n.loraRssi.toFixed(0)} dBm`:'NO LINK'}</text></g>;})}
+   {layers.ranges&&nodes.filter(n=>n.status!=='offline'&&n.type!=='gateway').map(n=>{const a=p(n.lat,n.lon);return <ellipse key={n.id} cx={a.x} cy={a.y} rx={rssiToDistance(n.rssi,calibration)*1.75} ry={rssiToDistance(n.rssi,calibration)*1.15} fill="none" stroke="var(--info)" strokeDasharray="3 8" opacity=".5"/>;})}
+   {layers.zones&&zones.map(z=>{const a=p(z.lat,z.lon);return <g key={z.id} onClick={()=>setSelectedZone(z.id)} className="cursor-pointer" role="button" aria-label={`Inspect ${z.id}`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')setSelectedZone(z.id);}}><ellipse className="estimate-circle" cx={a.x} cy={a.y} rx={z.radius*1.75} ry={z.radius*1.15} fill="var(--warning)" fillOpacity=".08" stroke="var(--warning)" strokeDasharray="5 4"/><ellipse cx={a.x} cy={a.y} rx={z.radius*.95} ry={z.radius*.63} fill="none" stroke="var(--warning)" strokeOpacity=".35"/><path d={`M${a.x} ${a.y} l${z.radius*1.75} 0 a${z.radius*1.75} ${z.radius*1.15} 0 0 1 ${-z.radius*.24} ${z.radius*.58} Z`} fill="var(--warning)" fillOpacity=".12" className={k.running?'zone-scan':undefined}/><circle cx={a.x} cy={a.y} r="6" fill="var(--warning)"/><path d={`M${a.x-12} ${a.y}h24 M${a.x} ${a.y-12}v24`} stroke="var(--warning)"/><text x={a.x+20} y={a.y-18} fill="var(--warning)" fontFamily="monospace" fontSize="12">{z.id} · {z.confidence??0}% HEURISTIC</text><text x={a.x+20} y={a.y} fill="var(--muted-foreground)" fontFamily="monospace" fontSize="11">PROBABLE AREA ±{z.radius} m</text></g>;})}
+   {nodes.map(n=>{const a=p(n.lat,n.lon),color=n.status==='offline'?'var(--critical)':n.type==='gateway'?'var(--info)':'var(--primary)';return <g key={n.id} data-node={n.id} role="button" tabIndex={0} aria-label={`Inspect node ${n.id}`} onKeyDown={e=>{if(e.key==='Enter')onSelectNode?.(n.id);}} className="cursor-pointer"><circle cx={a.x} cy={a.y} r="23" fill={color} fillOpacity=".08" stroke={color} strokeOpacity={selectedNode===n.id?'1':'.35'} className={n.status==='online'&&k.running?'node-ring':undefined}/><rect x={a.x-11} y={a.y-11} width="22" height="22" rx="3" fill="var(--map-surface)" stroke={color} strokeWidth="2"/><path d={`M${a.x-5} ${a.y+3}l5 -8 5 8Z`} fill={color}/><text x={a.x} y={a.y+41} textAnchor="middle" fill={color} fontSize="12" fontFamily="monospace">{n.id}{n.type==='gateway'?' / GATEWAY':''}</text><text x={a.x} y={a.y+56} textAnchor="middle" fill="var(--muted-foreground)" fontSize="10" fontFamily="monospace">{n.status.toUpperCase()} · {n.battery.toFixed(0)}%</text></g>;})}
+   {showTruth&&k.signal&&<g data-truth="true" className="cursor-move"><circle cx={500+k.signal.x*1.75} cy={350-k.signal.y*1.15} r="9" fill="none" stroke="var(--success)" strokeWidth="2"/><text x={514+k.signal.x*1.75} y={350-k.signal.y*1.15} fontSize="11" fill="var(--success)">SYNTHETIC GROUND TRUTH</text></g>}
+   </g>
+   <g fontFamily="monospace" fontSize="11" fill="var(--muted-foreground)"><text x="28" y="625">N ↑</text><path d="M28 648h175 M28 643v10 M203 643v10" stroke="var(--foreground)"/><text x="28" y="671">{Math.round(100/zoom)} m</text><text x="900" y="667">{Math.round(zoom*100)}%</text></g>
+  </svg>
+  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-4 text-[10px] text-muted-foreground bg-card/80 border border-border rounded px-3 py-1.5 whitespace-nowrap"><span className="text-primary">◇ Sniffer</span><span className="text-info">◇ Gateway</span><span className="text-warning">◉ Signal zone</span></div>
+  {zone&&<div className="absolute bottom-14 right-3 bg-card border border-warning/40 p-3 rounded text-xs max-w-56"><Button variant="ghost" size="sm" className="float-right" onClick={()=>setSelectedZone(null)}>×</Button><strong>{zone.id}</strong><p>Heuristic confidence {zone.confidence}%</p><p>Radius ±{zone.radius} m</p><p>Residual {zone.residual?.toFixed(1)} m</p><p>{zone.contributingNodes.join(' · ')}</p></div>}
+ </div>;
 }
