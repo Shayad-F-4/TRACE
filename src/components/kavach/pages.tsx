@@ -294,8 +294,7 @@ export function DetectionsPage() {
       />
       <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
         Device MAC addresses are never stored. Each observation is shown as an anonymised temporary
-        ID (TMP-…) generated per node per session. A detected device indicates a possible person, not
-        a confirmed survivor.
+        ID (TMP-…) generated per node per session. A detected signal does not establish the presence of a person.
       </div>
       {rows.length === 0 ? (
         <EmptyState
@@ -464,7 +463,7 @@ export function LogsPage() {
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kavach-logs-${Date.now()}.csv`;
+    a.download = `trace-logs-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success(`Exported ${rows.length} records to CSV`);
@@ -568,7 +567,7 @@ const HARDWARE = [
 
 const SOFTWARE = [
   ["ESP32 firmware", "Arduino/C++ sensor sampling and packet framing"],
-  ["LoRa mesh layer", "Store-and-forward relay to gateway node N04"],
+  ["Firmware relay layer", "Store-and-forward relay to gateway node N04"],
   ["Gateway + REST API", "Packet ingest endpoint for telemetry and observations"],
   ["Localization engine", "Log-distance path-loss + weighted least-squares multilateration"],
   ["Sensor fusion", "Prototype rule-based scoring; ML model can replace scoreEvidence()"],
@@ -577,7 +576,7 @@ const SOFTWARE = [
 
 const PIPELINE = [
   { icon: <Cpu className="h-4 w-4" />, label: "Sensor Nodes", sub: "ESP32 + multi-sensor" },
-  { icon: <RadioTower className="h-4 w-4" />, label: "LoRa Mesh", sub: "SX1278 store & forward" },
+  { icon: <RadioTower className="h-4 w-4" />, label: "LoRa transport", sub: "Firmware-defined relay" },
   { icon: <Layers className="h-4 w-4" />, label: "Gateway", sub: "N04 aggregator" },
   { icon: <Database className="h-4 w-4" />, label: "Backend / API", sub: "REST telemetry ingest" },
   { icon: <Radar className="h-4 w-4" />, label: "Localization & Fusion", sub: "Zones + priority score" },
@@ -636,7 +635,7 @@ export function SystemInfoPage() {
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold">API integration</p>
               <Badge variant="outline" className="border-success/40 bg-success/10 text-success">
-                <ShieldCheck className="mr-1 h-3 w-3" /> API integration ready
+                <ShieldCheck className="mr-1 h-3 w-3" /> API contract only
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -687,7 +686,7 @@ POST /api/public/observation  → single Wi-Fi/BLE observation`}
       </div>
 
       <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-        Prototype / research demonstration. KAVACH estimates probable search zones from supporting
+        Prototype / research demonstration. TRACE estimates probable search zones from supporting
         evidence. It does not detect survivors with certainty and is not a certified rescue system.
       </div>
     </div>

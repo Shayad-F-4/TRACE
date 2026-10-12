@@ -9,6 +9,10 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
+import { KavachProvider } from '@/lib/kavach/store';
+import { TraceShell } from '@/components/kavach/Shell';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -120,8 +124,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {/* Required: nested routes render here. Removing <TooltipProvider><KavachProvider><TraceShell><Outlet /></TraceShell><Toaster position="top-right" /></KavachProvider></TooltipProvider> breaks all child routes. */}
+      <TooltipProvider><KavachProvider><TraceShell><Outlet /></TraceShell><Toaster position="top-right" /></KavachProvider></TooltipProvider>
     </QueryClientProvider>
   );
 }
