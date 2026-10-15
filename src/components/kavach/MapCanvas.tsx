@@ -6,7 +6,7 @@ import { M_PER_DEG_LAT, mPerDegLon, rssiToDistance } from '@/lib/kavach/engine';
 import { SITE_ORIGIN, useKavach } from '@/lib/kavach/store';
 import type { CalibrationSettings, SearchZone, SensorNode } from '@/lib/kavach/types';
 export const localXY=(n:{lat:number;lon:number})=>({x:(n.lon-SITE_ORIGIN.lon)*mPerDegLon(SITE_ORIGIN.lat),y:(n.lat-SITE_ORIGIN.lat)*M_PER_DEG_LAT});
-interface Props {nodes:SensorNode[];zones:SearchZone[];calibration:CalibrationSettings;selectedNode?:string|null;onSelectNode?:(id:string)=>void;className?:string;editable?:boolean;showTruth?:boolean;onMoveSignal?:(x:number,y:number)=>void}
+export interface Props {nodes:SensorNode[];zones:SearchZone[];calibration:CalibrationSettings;selectedNode?:string|null;onSelectNode?:(id:string)=>void;className?:string;editable?:boolean;showTruth?:boolean;onMoveSignal?:(x:number,y:number)=>void}
 export function MapCanvas({nodes,zones,calibration,selectedNode,onSelectNode,className,editable=false,showTruth=false,onMoveSignal}:Props){
  const k=useKavach();const id=useId().replace(/:/g,'');const svg=useRef<SVGSVGElement>(null);const [zoom,setZoom]=useState(1);const [pan,setPan]=useState({x:0,y:0});const [layers,setLayers]=useState({links:true,ranges:false,zones:true});const [menu,setMenu]=useState(false);const [selectedZone,setSelectedZone]=useState<string|null>(null);
  const drag=useRef<{id:string|null;x:number;y:number;px:number;py:number;startX:number;startY:number}|null>(null);

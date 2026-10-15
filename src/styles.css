@@ -105,6 +105,17 @@
   --sidebar-ring: var(--primary);
   --shadow-panel: 0 3px 14px oklch(.08 .015 250 / .18);
   --signal-glow: drop-shadow(0 0 5px var(--primary));
+  --scene-sky: #1b2630;
+  --scene-ground: #45545a;
+  --scene-grid: #6b7c80;
+  --scene-concrete: #a7a9a0;
+  --scene-metal: #65747b;
+  --scene-water: #287d93;
+  --scene-primary: #4dd7c4;
+  --scene-warning: #f6bc57;
+  --scene-critical: #ee6471;
+  --scene-info: #77c5f0;
+  --scene-success: #65d69a;
 }
 
 @layer base {
