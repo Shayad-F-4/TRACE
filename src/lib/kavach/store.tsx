@@ -20,7 +20,7 @@ export function KavachProvider({children}:{children:ReactNode}) {
   const liveCache = useRef<Pick<State,'nodes'|'detections'|'zones'|'logs'|'alerts'|'samples'|'tick'|'gatewayConnected'>|null>(null);
   const simCache = useRef<State|null>(null);
   const log = (s:State, level:LogEvent['level'], source:string, message:string) => { s.logs = [{id:uid('evt'),ts:Date.now(),level,source,message},...s.logs].slice(0,400); };
-  const alert = (s:State,title:string,reason:string,target:string) => { if(s.alerts.some(a=>a.target===target&&!a.acknowledged))return; s.alerts=[{id:uid('alert'),ts:Date.now(),kind:target.startsWith('N')?'node':'zone',severity:'warning',title,reason,target,acknowledged:false},...s.alerts].slice(0,100); };
+  const alert = (s:State,title:string,reason:string,target:string) => { if(s.alerts.some(a=>a.target===target&&!a.acknowledged))return; const item:AlertItem={id:uid('alert'),ts:Date.now(),kind:target.startsWith('N')?'node':'zone',severity:'warning',title,reason,target,acknowledged:false};s.alerts=[item,...s.alerts].slice(0,100); };
   const advance = (prev:State,recalculate=false):State => {
     if(prev.mode!=='simulation')return prev;
     const s = {...prev,nodes:prev.nodes.map(n=>({...n})),logs:[...prev.logs],alerts:[...prev.alerts],tick:prev.tick+(recalculate?0:1)};

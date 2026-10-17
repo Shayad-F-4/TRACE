@@ -1,8 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, Html, Lightformer, Line, OrbitControls, useGLTF } from '@react-three/drei';
+import { Environment, Lightformer, Line, OrbitControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { Button } from '@/components/ui/button';
 import { useKavach } from '@/lib/kavach/store';
 import { localXY, type Props } from './MapCanvas';
 import buildingA from '@/assets/trace-building-a.asset.json';
@@ -43,7 +42,7 @@ function Terrain({colors}:{colors:Palette}) {
     <mesh rotation-x={-Math.PI/2} receiveShadow><planeGeometry args={[52,52]}/><meshStandardMaterial map={texture} color={colors.ground} roughness={.94}/></mesh>
     <mesh position={[0,.015,5]} rotation-x={-Math.PI/2}><planeGeometry args={[49,3]}/><meshStandardMaterial color={colors.metal} roughness={.85}/></mesh>
     {Array.from({length:14},(_,i)=><mesh key={i} position={[-24+i*3.7,.04,5]} rotation-x={-Math.PI/2}><planeGeometry args={[1.4,.08]}/><meshBasicMaterial color={colors.concrete}/></mesh>)}
-    <Suspense fallback={<Html center><span className="trace-label text-primary">Loading environment…</span></Html>}>
+    <Suspense fallback={null}>
       <Building url={buildingA.url} position={[-8,0,-6]} tilt={k.scenario==='collapse'?.18:0}/>
       <Building url={buildingC.url} position={[8,0,7]} tilt={k.scenario==='collapse'?-.12:0}/>
       <Building url={buildingA.url} position={[-12,0,12]}/>
@@ -51,7 +50,6 @@ function Terrain({colors}:{colors:Palette}) {
     {k.scenario==='collapse'&&Array.from({length:24},(_,i)=><mesh key={i} position={[-6+(i*3.1)%12,.18+(i%3)*.1,-3+(i*2.7)%7]} rotation={[i*.8,i*.42,i*.15]} castShadow><boxGeometry args={[.6+(i%4)*.3,.4,.6]}/><meshStandardMaterial color={i%3===0?colors.metal:colors.concrete} roughness={.95}/></mesh>)}
     {k.scenario==='flood'&&<mesh position={[0,.3,-1]} rotation-x={-Math.PI/2}><planeGeometry args={[30,18]}/><meshPhysicalMaterial color={colors.water} transparent opacity={.72} roughness={.18} metalness={.3}/></mesh>}
     {k.scenario==='industrial'&&Array.from({length:4},(_,i)=><mesh key={i} position={[3+i*2,1.8,-8]} castShadow><cylinderGeometry args={[.9,.9,3.6,16]}/><meshStandardMaterial color={colors.metal} metalness={.65} roughness={.4}/></mesh>)}
-    <Html position={[-8,.25,-12]} center><span className="trace-label whitespace-nowrap">{k.scenario==='collapse'?'COLLAPSED SECTOR A':k.scenario==='flood'?'INUNDATED SECTOR A':'METAL OBSTRUCTION A'}</span></Html>
   </>;
 }
 function Packet({from,to,color,active}:{from:THREE.Vector3;to:THREE.Vector3;color:string;active:boolean}){
@@ -78,7 +76,6 @@ function World({props,select,colors,reduced}:{props:Props;select:(s:SceneSelecti
         <mesh castShadow><cylinderGeometry args={[n.type==='gateway'?.65:.35,.5,.75,6]}/><meshStandardMaterial color={colors.metal} metalness={.5} roughness={.35}/></mesh>
         <mesh position-y={.55}><cylinderGeometry args={[.06,.06,1,8]}/><meshStandardMaterial color={color}/></mesh>
         <mesh position-y={-.6} rotation-x={-Math.PI/2}><ringGeometry args={[.75,.88,32]}/><meshBasicMaterial color={color} side={THREE.DoubleSide}/></mesh>
-        <Html position={[0,1.7,0]} center><Button size="sm" variant="outline" className="h-auto px-2 py-1 bg-card/90 text-[10px] mono-num whitespace-nowrap" aria-label={`Inspect 3D ${n.type==='gateway'?'gateway':'node'} ${n.id}`} onClick={()=>{select({kind:'node',id:n.id});props.onSelectNode?.(n.id);}}>{n.id} · {n.type==='gateway'?(k.mode==='simulation'?'SIMULATED GATEWAY':'GATEWAY'):n.status.toUpperCase()}</Button></Html>
       </group>;
     })}
     {gateway&&props.nodes.filter(n=>n.id!==gateway.id).map(n=>{const from=coords(n,.5),to=coords(gateway,.5);const active=transport&&n.status!=='offline';return <group key={`link-${n.id}`}><Line points={[from,to]} color={active?colors.primary:colors.critical} transparent opacity={.45} dashed dashSize={.4} gapSize={.3} lineWidth={1}/><Packet from={from} to={to} color={colors.primary} active={active&&k.running&&!reduced}/></group>;})}
@@ -86,9 +83,8 @@ function World({props,select,colors,reduced}:{props:Props;select:(s:SceneSelecti
       <mesh rotation-x={-Math.PI/2}><circleGeometry args={[z.radius/10,64]}/><meshBasicMaterial color={colors.warning} transparent opacity={.09} side={THREE.DoubleSide} depthWrite={false}/></mesh>
       <mesh rotation-x={-Math.PI/2}><ringGeometry args={[z.radius/10-.05,z.radius/10+.05,64]}/><meshBasicMaterial color={colors.warning} side={THREE.DoubleSide}/></mesh>
       <Scan radius={z.radius/10} color={colors.warning} active={k.running&&!reduced}/>
-      <Html position={[0,2,0]} center><Button variant="outline" size="sm" className="border-warning/60 bg-card/90 text-warning h-auto py-1 px-2 text-[10px] whitespace-nowrap" aria-label={`Inspect 3D zone ${z.id}`} onClick={()=>select({kind:'zone',id:z.id})}>{z.id} · ±{z.radius} m · {z.confidence}% HEURISTIC</Button></Html>
     </group>)}
-    {props.showTruth&&k.mode==='simulation'&&k.signal&&<group position={[k.signal.x/10,.5,-k.signal.y/10]} onClick={e=>{e.stopPropagation();select({kind:'signal',id:k.signal?.id??'SYN-01'});}}><mesh><octahedronGeometry args={[.35]}/><meshBasicMaterial color={colors.success}/></mesh><Html position={[0,1,0]} center><Button variant="outline" size="sm" className="h-auto px-2 py-1 text-[10px] text-success whitespace-nowrap" aria-label="Inspect synthetic signal" onClick={()=>select({kind:'signal',id:k.signal?.id??'SYN-01'})}>SYNTHETIC GROUND TRUTH</Button></Html></group>}
+    {props.showTruth&&k.mode==='simulation'&&k.signal&&<group position={[k.signal.x/10,.5,-k.signal.y/10]} onClick={e=>{e.stopPropagation();select({kind:'signal',id:k.signal?.id??'SYN-01'});}}><mesh><octahedronGeometry args={[.35]}/><meshBasicMaterial color={colors.success}/></mesh></group>}
     <OrbitControls makeDefault target={[0,0,0]} minDistance={18} maxDistance={85} maxPolarAngle={Math.PI/2.15} enableDamping={!reduced}/>
   </>;
 }
