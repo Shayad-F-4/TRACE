@@ -7,8 +7,8 @@ import { MapCanvas, localXY, type Props } from './MapCanvas';
 import type { SceneSelection } from './DisasterScene';
 const Scene=lazy(()=>import('./DisasterScene'));
 class SceneBoundary extends Component<{children:ReactNode;fallback:ReactNode},{failed:boolean}>{
-  state={failed:false};static getDerivedStateFromError(){return {failed:true};}
-  render(){return this.state.failed?this.props.fallback:this.props.children;}
+  override state={failed:false};static override getDerivedStateFromError(){return {failed:true};}
+  override render(){return this.state.failed?this.props.fallback:this.props.children;}
 }
 export function TacticalScene(props:Props){
   const k=useKavach();const [mounted,setMounted]=useState(false),[selection,setSelection]=useState<SceneSelection>(null),[reset,setReset]=useState(0);
@@ -19,7 +19,7 @@ export function TacticalScene(props:Props){
   return <div className="space-y-2">
     <div className="flex flex-wrap gap-2 items-center justify-between"><div className="flex gap-1" role="group" aria-label="Tactical view"><Button size="sm" variant={k.sceneMode==='2d'?'default':'outline'} onClick={()=>k.setSceneMode('2d')}><Map/>2D</Button><Button size="sm" variant={k.sceneMode==='3d'?'default':'outline'} onClick={()=>k.setSceneMode('3d')}><Box/>3D</Button><Button size="icon" variant="ghost" title="Reset 3D camera" aria-label="Reset 3D camera" onClick={()=>setReset(v=>v+1)}><Crosshair/></Button></div><span className="trace-label text-warning">{k.mode==='simulation'?`SIMULATION / ${k.scenario.toUpperCase()}`:'HARDWARE / LOCAL GRID'}</span></div>
     {k.sceneMode==='2d'?<MapCanvas {...props}/>:<div className={`relative overflow-hidden ${props.className??'trace-map'}`}>
-      {mounted&&<SceneBoundary fallback={<div className="h-full"><p className="absolute z-10 top-14 left-4 text-xs text-warning">3D unavailable on this device · 2D view retained</p><MapCanvas {...props} className="h-full"/></div>}><Suspense fallback={<div className="h-full grid place-items-center text-primary trace-label">Loading tactical scene…</div>}><Scene props={{...props,onSelectNode:undefined}} select={setSelection} reset={reset}/></Suspense></SceneBoundary>}
+      {mounted&&<SceneBoundary fallback={<div className="h-full"><p className="absolute z-10 top-14 left-4 text-xs text-warning">3D unavailable on this device · 2D view retained</p><MapCanvas {...props} className="h-full"/></div>}><Suspense fallback={<div className="h-full grid place-items-center text-primary trace-label">Loading tactical scene…</div>}><Scene props={props} select={setSelection} reset={reset}/></Suspense></SceneBoundary>}
       <div className="absolute left-3 top-3 pointer-events-none"><p className="trace-label">TRACE / SECTOR DELTA</p><p className="text-[10px] mt-1 text-info">{k.mode==='simulation'?'SIMULATED GATEWAY':'GATEWAY UNVERIFIED'} · {k.gatewayConnected?'TRANSPORT AVAILABLE':'TRANSPORT UNAVAILABLE'}</p></div>
       {!k.zones.length&&<p className="absolute bottom-3 left-3 right-3 text-[11px] text-warning pointer-events-none">{k.mode==='live'?'No verified hardware estimate':!k.signal?'No synthetic source':'Estimate unavailable · three reporting sniffers and gateway required'}</p>}
     </div>}
