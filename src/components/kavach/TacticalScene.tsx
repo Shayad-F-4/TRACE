@@ -7,7 +7,7 @@ import { MapCanvas, localXY, type Props } from './MapCanvas';
 import type { SceneSelection } from './DisasterScene';
 const Scene=lazy(()=>import('./DisasterScene'));
 class SceneBoundary extends Component<{children:ReactNode;fallback:ReactNode},{failed:boolean}>{
-  override state={failed:false};static override getDerivedStateFromError(){return {failed:true};}
+  override state={failed:false};static getDerivedStateFromError(){return {failed:true};}
   override render(){return this.state.failed?this.props.fallback:this.props.children;}
 }
 export function TacticalScene(props:Props){
