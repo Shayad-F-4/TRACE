@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Triangulated Rescue Aid via Crowd-Signal Estimation. Tactical search operations research prototype.",
+          "Triangulated Rescue Aid via Crowd-Signal Estimation. Tactical disaster-response search operations platform.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

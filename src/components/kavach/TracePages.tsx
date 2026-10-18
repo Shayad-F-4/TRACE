@@ -7412,7 +7412,7 @@ export function Limitations() {
           probability.
         </p>
         <p>
-          • This research prototype aids tactical search triage; it does not replace trained canine
+          • This platform aids tactical search triage; it does not replace trained canine
           or physical SAR teams.
         </p>
       </div>
