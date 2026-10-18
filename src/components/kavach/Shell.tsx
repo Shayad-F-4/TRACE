@@ -47,9 +47,40 @@ export const NAV_GROUPS: NavGroupDef[] = [
     name: "TACTICAL OPERATIONS",
     items: [
       { to: "/", label: "Command Center", icon: Gauge },
-      { to: "/map", label: "Live Map", icon: Map },
+      { to: "/map", label: "Live Tactical Map", icon: Map },
+      { to: "/incidents", label: "Incidents", icon: Siren },
+      { to: "/detections", label: "Signal Detections", icon: Radar, badgeKey: "detections" },
+      { to: "/survivors", label: "Survivors Registry", icon: Users },
+      { to: "/operations", label: "Rescue Operations", icon: LifeBuoy },
+    ],
+  },
+  {
+    name: "HARDWARE & RF CALIBRATION",
+    items: [
       { to: "/devices", label: "Devices & Calibration", icon: RadioTower, badgeKey: "nodes" },
+      { to: "/nodes", label: "Sensor Nodes", icon: Cpu },
+      { to: "/gateway", label: "Gateway Concentrator", icon: Wifi },
+      { to: "/hardware", label: "Hardware Integration", icon: Activity },
+      { to: "/topology", label: "Network Topology", icon: GitBranch },
+    ],
+  },
+  {
+    name: "INTELLIGENCE & SIMULATION",
+    items: [
+      { to: "/simulation", label: "Simulation Lab", icon: TestTube2 },
+      { to: "/analytics", label: "Analytics & Telemetry", icon: Activity },
       { to: "/history", label: "Incident History", icon: History },
+      { to: "/logs", label: "Event Logs", icon: ScrollText },
+      { to: "/reports", label: "Operational Reports", icon: FileText },
+    ],
+  },
+  {
+    name: "SYSTEM & ADMINISTRATION",
+    items: [
+      { to: "/alerts", label: "Alerts & Warnings", icon: Bell, badgeKey: "alerts" },
+      { to: "/health", label: "System Health", icon: Shield },
+      { to: "/api-docs", label: "API Docs (OpenAPI)", icon: FileCode2 },
+      { to: "/settings", label: "System Settings", icon: Settings2 },
     ],
   },
 ];
