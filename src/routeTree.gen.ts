@@ -14,16 +14,20 @@ import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as ApiDocsRouteImport } from './routes/api-docs'
 import { Route as DetectionsRouteImport } from './routes/detections'
+import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as GatewayRouteImport } from './routes/gateway'
 import { Route as HardwareRouteImport } from './routes/hardware'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IncidentsRouteImport } from './routes/incidents'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as NodesRouteImport } from './routes/nodes'
+import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SimulationRouteImport } from './routes/simulation'
+import { Route as SurvivorsRouteImport } from './routes/survivors'
 import { Route as TopologyRouteImport } from './routes/topology'
 
 const IndexRoute = IndexRouteImport.update({
@@ -51,6 +55,11 @@ const DetectionsRoute = DetectionsRouteImport.update({
   path: '/detections',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevicesRoute = DevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GatewayRoute = GatewayRouteImport.update({
   id: '/gateway',
   path: '/gateway',
@@ -64,6 +73,11 @@ const HardwareRoute = HardwareRouteImport.update({
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IncidentsRoute = IncidentsRouteImport.update({
@@ -86,6 +100,11 @@ const NodesRoute = NodesRouteImport.update({
   path: '/nodes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperationsRoute = OperationsRouteImport.update({
+  id: '/operations',
+  path: '/operations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -101,6 +120,11 @@ const SimulationRoute = SimulationRouteImport.update({
   path: '/simulation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SurvivorsRoute = SurvivorsRouteImport.update({
+  id: '/survivors',
+  path: '/survivors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TopologyRoute = TopologyRouteImport.update({
   id: '/topology',
   path: '/topology',
@@ -113,16 +137,20 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRoute
   '/api-docs': typeof ApiDocsRoute
   '/detections': typeof DetectionsRoute
+  '/devices': typeof DevicesRoute
   '/gateway': typeof GatewayRoute
   '/hardware': typeof HardwareRoute
   '/health': typeof HealthRoute
+  '/history': typeof HistoryRoute
   '/incidents': typeof IncidentsRoute
   '/logs': typeof LogsRoute
   '/map': typeof MapRoute
   '/nodes': typeof NodesRoute
+  '/operations': typeof OperationsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/simulation': typeof SimulationRoute
+  '/survivors': typeof SurvivorsRoute
   '/topology': typeof TopologyRoute
 }
 export interface FileRoutesByTo {
@@ -131,16 +159,20 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/api-docs': typeof ApiDocsRoute
   '/detections': typeof DetectionsRoute
+  '/devices': typeof DevicesRoute
   '/gateway': typeof GatewayRoute
   '/hardware': typeof HardwareRoute
   '/health': typeof HealthRoute
+  '/history': typeof HistoryRoute
   '/incidents': typeof IncidentsRoute
   '/logs': typeof LogsRoute
   '/map': typeof MapRoute
   '/nodes': typeof NodesRoute
+  '/operations': typeof OperationsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/simulation': typeof SimulationRoute
+  '/survivors': typeof SurvivorsRoute
   '/topology': typeof TopologyRoute
 }
 export interface FileRoutesById {
@@ -150,16 +182,20 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/api-docs': typeof ApiDocsRoute
   '/detections': typeof DetectionsRoute
+  '/devices': typeof DevicesRoute
   '/gateway': typeof GatewayRoute
   '/hardware': typeof HardwareRoute
   '/health': typeof HealthRoute
+  '/history': typeof HistoryRoute
   '/incidents': typeof IncidentsRoute
   '/logs': typeof LogsRoute
   '/map': typeof MapRoute
   '/nodes': typeof NodesRoute
+  '/operations': typeof OperationsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/simulation': typeof SimulationRoute
+  '/survivors': typeof SurvivorsRoute
   '/topology': typeof TopologyRoute
 }
 export interface FileRouteTypes {
@@ -170,16 +206,20 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/api-docs'
     | '/detections'
+    | '/devices'
     | '/gateway'
     | '/hardware'
     | '/health'
+    | '/history'
     | '/incidents'
     | '/logs'
     | '/map'
     | '/nodes'
+    | '/operations'
     | '/reports'
     | '/settings'
     | '/simulation'
+    | '/survivors'
     | '/topology'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -188,16 +228,20 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/api-docs'
     | '/detections'
+    | '/devices'
     | '/gateway'
     | '/hardware'
     | '/health'
+    | '/history'
     | '/incidents'
     | '/logs'
     | '/map'
     | '/nodes'
+    | '/operations'
     | '/reports'
     | '/settings'
     | '/simulation'
+    | '/survivors'
     | '/topology'
   id:
     | '__root__'
@@ -206,16 +250,20 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/api-docs'
     | '/detections'
+    | '/devices'
     | '/gateway'
     | '/hardware'
     | '/health'
+    | '/history'
     | '/incidents'
     | '/logs'
     | '/map'
     | '/nodes'
+    | '/operations'
     | '/reports'
     | '/settings'
     | '/simulation'
+    | '/survivors'
     | '/topology'
   fileRoutesById: FileRoutesById
 }
@@ -225,16 +273,20 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   ApiDocsRoute: typeof ApiDocsRoute
   DetectionsRoute: typeof DetectionsRoute
+  DevicesRoute: typeof DevicesRoute
   GatewayRoute: typeof GatewayRoute
   HardwareRoute: typeof HardwareRoute
   HealthRoute: typeof HealthRoute
+  HistoryRoute: typeof HistoryRoute
   IncidentsRoute: typeof IncidentsRoute
   LogsRoute: typeof LogsRoute
   MapRoute: typeof MapRoute
   NodesRoute: typeof NodesRoute
+  OperationsRoute: typeof OperationsRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   SimulationRoute: typeof SimulationRoute
+  SurvivorsRoute: typeof SurvivorsRoute
   TopologyRoute: typeof TopologyRoute
 }
 
@@ -275,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DetectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/devices': {
+      id: '/devices'
+      path: '/devices'
+      fullPath: '/devices'
+      preLoaderRoute: typeof DevicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gateway': {
       id: '/gateway'
       path: '/gateway'
@@ -294,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/incidents': {
@@ -324,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NodesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/operations': {
+      id: '/operations'
+      path: '/operations'
+      fullPath: '/operations'
+      preLoaderRoute: typeof OperationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports': {
       id: '/reports'
       path: '/reports'
@@ -345,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SimulationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/survivors': {
+      id: '/survivors'
+      path: '/survivors'
+      fullPath: '/survivors'
+      preLoaderRoute: typeof SurvivorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/topology': {
       id: '/topology'
       path: '/topology'
@@ -361,16 +441,20 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   ApiDocsRoute: ApiDocsRoute,
   DetectionsRoute: DetectionsRoute,
+  DevicesRoute: DevicesRoute,
   GatewayRoute: GatewayRoute,
   HardwareRoute: HardwareRoute,
   HealthRoute: HealthRoute,
+  HistoryRoute: HistoryRoute,
   IncidentsRoute: IncidentsRoute,
   LogsRoute: LogsRoute,
   MapRoute: MapRoute,
   NodesRoute: NodesRoute,
+  OperationsRoute: OperationsRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   SimulationRoute: SimulationRoute,
+  SurvivorsRoute: SurvivorsRoute,
   TopologyRoute: TopologyRoute,
 }
 export const routeTree = rootRouteImport

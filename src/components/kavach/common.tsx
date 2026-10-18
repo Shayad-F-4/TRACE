@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import { HelpCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, formatCsv } from "@/lib/utils";
 import type { NodeStatus, Priority, Severity } from "@/lib/kavach/types";
 
-export const fmtTime = (ts: number) =>
-  new Date(ts).toLocaleTimeString("en-GB", { hour12: false });
+export { formatCsv };
 
-export const fmtDateTime = (ts: number) =>
-  new Date(ts).toLocaleString("en-GB", { hour12: false });
+export const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString("en-GB", { hour12: false });
+
+export const fmtDateTime = (ts: number) => new Date(ts).toLocaleString("en-GB", { hour12: false });
 
 export const ago = (ts: number) => {
   const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
@@ -93,12 +94,25 @@ export function SectionHeader({
   );
 }
 
-export function EmptyState({ icon, title, hint }: { icon: ReactNode; title: string; hint: string }) {
+export function EmptyState({
+  icon,
+  title,
+  hint,
+  text,
+}: {
+  icon?: ReactNode;
+  title?: string;
+  hint?: string;
+  text?: string;
+}) {
+  const displayTitle = title ?? text ?? "No records available";
+  const displayHint =
+    hint ?? "Check gateway connections or activate the simulation loop to produce observations.";
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border px-6 py-12 text-center">
-      <div className="text-muted-foreground">{icon}</div>
-      <p className="text-sm font-medium">{title}</p>
-      <p className="max-w-sm text-xs text-muted-foreground">{hint}</p>
+    <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border px-6 py-10 text-center">
+      {icon && <div className="text-muted-foreground">{icon}</div>}
+      <p className="text-sm font-medium text-foreground/90">{displayTitle}</p>
+      {displayHint && <p className="max-w-md text-xs text-muted-foreground/70">{displayHint}</p>}
     </div>
   );
 }
@@ -129,4 +143,25 @@ export function Metric({
       </p>
     </div>
   );
+}
+
+/** Trigger browser file download of RFC-4180 formatted CSV data */
+export function exportCsv(name: string, headers: string[], rows: unknown[][]) {
+  if (!headers.length && !rows.length) {
+    toast.error("No records available to export");
+    return;
+  }
+  try {
+    const text = formatCsv(headers, rows);
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `trace-${name}-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${name} data to CSV (${rows.length} records)`);
+  } catch (err) {
+    toast.error(`Export failed: ${String(err)}`);
+  }
 }

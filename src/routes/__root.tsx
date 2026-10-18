@@ -9,12 +9,12 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
-import { KavachProvider } from '@/lib/kavach/store';
-import { TraceShell } from '@/components/kavach/Shell';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { Toaster } from '@/components/ui/sonner';
+import { KavachProvider } from "@/lib/kavach/store";
+import { TraceShell } from "@/components/kavach/Shell";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportTraceError } from "../lib/trace-error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -38,11 +38,11 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportTraceError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -85,18 +85,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Triangulated Rescue Aid via Crowd-Signal Estimation" },
       { name: "author", content: "TRACE" },
       { property: "og:title", content: "TRACE | Rescue Command" },
-      { property: "og:description", content: "Triangulated Rescue Aid via Crowd-Signal Estimation" },
+      {
+        property: "og:description",
+        content: "Triangulated Rescue Aid via Crowd-Signal Estimation",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      
     ],
     links: [
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap",
+      },
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/trace-icon.svg", type: "image/svg+xml" },
+      { rel: "alternate icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
@@ -125,7 +131,14 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <TooltipProvider><KavachProvider><TraceShell><Outlet /></TraceShell><Toaster position="top-right" /></KavachProvider></TooltipProvider> breaks all child routes. */}
-      <TooltipProvider><KavachProvider><TraceShell><Outlet /></TraceShell><Toaster position="top-right" /></KavachProvider></TooltipProvider>
+      <TooltipProvider>
+        <KavachProvider>
+          <TraceShell>
+            <Outlet />
+          </TraceShell>
+          <Toaster position="top-right" />
+        </KavachProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

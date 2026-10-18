@@ -44,9 +44,18 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+import { handleApiRouter } from "./server/api/router.ts";
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+
+      // Dedicated genuine REST API ingress boundary for TRACE Production
+      if (url.pathname.startsWith("/api")) {
+        return await handleApiRouter(request, url);
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
