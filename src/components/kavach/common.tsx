@@ -135,9 +135,9 @@ export function Metric({
     success: "text-success",
   }[tone];
   return (
-    <div className="rounded-md border border-border bg-secondary/40 px-3 py-2">
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mono-num text-sm font-semibold", toneCls)}>
+    <div className="rounded-xl border border-border/80 bg-secondary/50 p-3 shadow-xs">
+      <p className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground font-semibold">{label}</p>
+      <p className={cn("mono-num text-lg font-bold tracking-tight mt-0.5", toneCls)}>
         {value}
         {unit && <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span>}
       </p>

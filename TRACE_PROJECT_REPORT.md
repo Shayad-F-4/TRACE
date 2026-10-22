@@ -11,11 +11,14 @@
 
 In this consolidation phase, the TRACE platform was systematically audited, simplified, and hardened against real IoT hardware requirements:
 
-1. **4 Essential Workspaces**:
+1. **6 Essential Primary Workspaces**:
    - **Command Center (`/`)**: Tactical HUD with active incident status, connection badges, last telemetry received, search zone summary, and dynamic **Recommended Next Action** guidance.
-   - **Live Map (`/map`)**: Full-screen 2D tactical disaster map with uniform 1:1 metric projection, true circular uncertainty zones, and floating inspector card.
-   - **Devices & Calibration (`/devices`)**: Consolidated hardware gateway concentrator status, companion serial bridge daemon quickstart, sniffer station inventory, and an interactive 4-step **RF Path-Loss Calibration Wizard**.
+   - **Live Map (`/map`)**: Full-screen 2D tactical disaster map and 3D building/rubble view with uniform 1:1 metric projection, true circular uncertainty zones, and floating inspector card.
+   - **Devices & Signals (`/devices`)**: Consolidated hardware gateway concentrator status, companion serial bridge daemon quickstart, sniffer station inventory, and live signal feed.
+   - **Calibration (`/calibration`)**: Dedicated 4-step **RF Path-Loss Calibration Wizard** with closed-form OLS linear regression ($A_0, n, R^2, \text{RMSE}$) and SQLite persistence.
    - **Incident History (`/history`)**: Consolidated incident log, chronological operational timelines, historical multilateration runs with GDOP and residual errors, searchable immutable audit trail, and RFC-4180 CSV export.
+   - **Settings & Hardware (`/settings`)**: Hardware bridge configuration, Web Serial, daemon settings, and simulation lab workbench.
+   *(All 14 secondary views are accessible via the Secondary Modules drawer).*
 2. **Fixed Map & Location Logic**:
    - Eliminated arbitrary fixed-origin hardcoding and distorted non-uniform aspect ratios ($1.75 / 1.15$ skew).
    - Dynamic tactical centering: automatically centers on the active incident configured coordinates (with explicit amber warning and centroid fallback when unconfigured).
@@ -28,12 +31,12 @@ In this consolidation phase, the TRACE platform was systematically audited, simp
    - Physical plausibility checks ($1.4 \le n \le 4.8$, $R^2 \ge 0.60$, $\text{RMSE} \le 8.0\text{ dB}$).
    - SQLite persistent storage in `calibration_profiles` and `calibration_samples` tables with active profile switching.
 4. **Hardware Verification & Telemetry Protocol**:
-   - Standardized versioned Telemetry Protocol v2.4 envelope with deduplication, bounds validation, and provenance tracking.
+   - Standardized versioned Telemetry Protocol v2.0 envelope with deduplication, bounds validation, and provenance tracking.
    - Python companion daemon (`scripts/trace_gateway_daemon.py`) bridging USB serial (115200 baud) to REST ingress.
+   - Three ESP32 boards allocated and documented in `docs/HARDWARE_INVENTORY.md` with complete firmware in `firmware/`.
 5. **Quality Verification**:
-   - **82 / 82** automated unit and integration tests passing (`npm test`).
+   - **83 / 83** automated unit and integration tests passing (`npm test`).
    - **0** TypeScript errors (`npx tsc --noEmit`).
-   - **0** ESLint errors (`npm run lint`).
    - Production bundle builds cleanly (`npm run build`).
 
 ---

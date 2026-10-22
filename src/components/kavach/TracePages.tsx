@@ -28,11 +28,13 @@ import {
   ScrollText,
   Search,
   Settings2,
+  Shield,
   ShieldAlert,
   SlidersHorizontal,
   Square,
   StepForward,
   Terminal,
+  TestTube2,
   Trash2,
   UserCheck,
   Users,
@@ -300,702 +302,362 @@ export function Overview() {
   const criticalAlerts = unackAlerts.filter((a) => a.severity === "critical");
   const lastPacketTime = Math.max(...k.nodes.map((n) => n.lastPacket || 0), 0);
 
+  // Derive genuine operational state
+  const readinessState = !k.gatewayConnected
+    ? { label: "Gateway Disconnected", color: "text-critical border-critical/40 bg-critical/10" }
+    : online < 3
+      ? { label: `Insufficient Anchors (${online}/3)`, color: "text-warning border-warning/40 bg-warning/10" }
+      : z
+        ? { label: "Search Estimate Active", color: "text-success border-success/40 bg-success/10" }
+        : k.mode === "simulation"
+          ? { label: "Simulation Active", color: "text-primary border-primary/40 bg-primary/10" }
+          : { label: "Telemetry Ready", color: "text-emerald-400 border-emerald-500/40 bg-emerald-500/10" };
+
   return (
-    <div className="space-y-5">
-      <Heading
-        category="OPERATIONS"
-        title="Command Center"
-        sub="Tactical situational awareness, active sensor nodes, and multi-sensor search estimation"
-        action={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={k.running ? k.pause : k.start}
-              disabled={k.mode === "live"}
-              className="h-8 text-xs"
-            >
-              {k.running ? (
-                <Pause size={13} className="mr-1.5" />
-              ) : (
-                <Play size={13} className="mr-1.5" />
-              )}
-              {k.running ? "Pause Feed" : "Resume Feed"}
-            </Button>
-            <Button asChild size="sm" className="h-8 text-xs">
-              <Link to="/map">
-                <Radar size={13} className="mr-1.5" />
-                Live Tactical Map
-                <ArrowUpRight size={13} className="ml-1" />
-              </Link>
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Operational Mode & Quick Status Banner */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-        {/* Active Incident Overview */}
+    <div className="space-y-4">
+      {/* Top Tactical Telemetry Strip (5 standardized metrics) */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Link
           to="/history"
-          className="panel p-3 space-y-1 hover:border-primary/60 transition-colors block cursor-pointer group"
+          className="panel p-4 rounded-xl space-y-1 hover:border-primary/50 transition-all block cursor-pointer min-h-[104px] flex flex-col justify-between shadow-xs hover:shadow-md"
         >
-          <div className="flex items-center justify-between">
-            <span className="trace-label text-[9px] text-muted-foreground group-hover:text-primary transition-colors">
-              ACTIVE INCIDENT
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-mono text-muted-foreground uppercase font-semibold tracking-wider">INCIDENT</span>
+            <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase font-mono", currentIncident?.status === "active" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "bg-muted text-muted-foreground")}>
+              {currentIncident?.status ?? "STANDBY"}
             </span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] uppercase font-mono",
-                currentIncident?.status === "active"
-                  ? "border-success/40 text-success bg-success/5"
-                  : "text-muted-foreground",
-              )}
-            >
-              {currentIncident?.status ?? "No Incident"}
-            </Badge>
           </div>
-          <p className="font-semibold text-foreground truncate">
-            {currentIncident?.name ?? "No incident active"}
+          <p className="font-bold text-foreground text-sm tracking-tight truncate">
+            {currentIncident?.name ?? "Sector Delta Response"}
           </p>
-          <p className="text-[10px] text-muted-foreground truncate">
-            {currentIncident?.disaster || "Disaster Zone"} ·{" "}
-            {currentIncident?.location || "Field Coordinates"}
-          </p>
-        </Link>
-
-        {/* Gateway Connectivity Summary */}
-        <Link
-          to="/devices"
-          className="panel p-3 space-y-1 hover:border-primary/60 transition-colors block cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="trace-label text-[9px] text-muted-foreground group-hover:text-primary transition-colors">
-              GATEWAY CONNECTIVITY
-            </span>
-            <span
-              className={cn(
-                "h-2 w-2 rounded-full",
-                k.gatewayConnected ? "bg-success" : "bg-critical",
-              )}
-            />
-          </div>
-          <p className="font-semibold text-foreground truncate">
-            {k.gatewayConnected
-              ? "LoRa 868 MHz Concentrator Online"
-              : "Gateway Offline / Disconnected"}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            {k.mode === "simulation" ? "Simulated Gateway N04" : "Hardware GW"} ·{" "}
-            {gwNode?.lastPacket ? ago(gwNode.lastPacket) : "Awaiting heartbeat"}
-          </p>
-        </Link>
-
-        {/* Alerts Summary */}
-        <Link
-          to="/history"
-          className="panel p-3 space-y-1 hover:border-warning/60 transition-colors block cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="trace-label text-[9px] text-muted-foreground group-hover:text-warning transition-colors">
-              ALERT SUMMARY
-            </span>
-            <AlertTriangle
-              size={13}
-              className={unackAlerts.length ? "text-warning" : "text-muted-foreground"}
-            />
-          </div>
-          <p className="font-semibold text-foreground flex items-center gap-2">
-            <span>{unackAlerts.length} Active Alerts</span>
-            {criticalAlerts.length > 0 && (
-              <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
-                {criticalAlerts.length} CRITICAL
-              </Badge>
-            )}
-          </p>
-          <p className="text-[10px] text-muted-foreground truncate">
-            {unackAlerts.length ? unackAlerts[0]?.title : "All sensor channels within limits"}
-          </p>
-        </Link>
-
-        {/* Mode & Environment Indicator */}
-        <div className="panel p-3 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="trace-label text-[9px] text-muted-foreground">OPERATIONAL MODE</span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] font-mono",
-                k.mode === "simulation"
-                  ? "border-warning/40 text-warning bg-warning/10"
-                  : "border-primary/40 text-primary bg-primary/10",
-              )}
-            >
-              {k.mode === "simulation" ? "SIMULATION MODE" : "LIVE HARDWARE"}
-            </Badge>
-          </div>
-          <p className="font-semibold text-foreground">
-            {k.mode === "simulation"
-              ? `Scenario: ${k.scenario.toUpperCase()}`
-              : k.nodes.length
-                ? `${k.nodes.length} Live Nodes Discovered`
-                : "Awaiting Live Telemetry"}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            {k.mode === "simulation"
-              ? `PRNG 20261012 · Noise ±${k.noise} dB · Obstruction ${k.obstruction} dB`
-              : `Last telemetry: ${lastPacketTime ? ago(lastPacketTime) : "No data available"}`}
-          </p>
-        </div>
-      </div>
-
-      {/* Summary KPI Cards with Direct Route Navigation */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <Link
-          to="/devices"
-          className="panel p-3.5 space-y-1 block hover:border-primary/60 transition-colors group cursor-pointer"
-        >
-          <div className="flex items-center justify-between text-muted-foreground group-hover:text-primary transition-colors">
-            <span className="trace-label text-[9px]">ACTIVE NODES</span>
-            <RadioTower size={14} className="text-primary" />
-          </div>
-          <p className="mono-num text-2xl font-bold text-foreground">
-            {k.nodes.length ? (
-              <>
-                <Count value={online} />
-                <span className="text-sm font-normal text-muted-foreground">/{k.nodes.length}</span>
-              </>
-            ) : (
-              <span className="text-base font-normal text-muted-foreground">No data available</span>
-            )}
-          </p>
-          <p className="text-[10px] text-muted-foreground flex items-center justify-between">
-            <span>Sniffers + gateway</span>
-            <ChevronRight
-              size={12}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </p>
-        </Link>
-
-        <Link
-          to="/map"
-          className="panel p-3.5 space-y-1 block hover:border-primary/60 transition-colors group cursor-pointer"
-        >
-          <div className="flex items-center justify-between text-muted-foreground group-hover:text-primary transition-colors">
-            <span className="trace-label text-[9px]">ANONYMOUS SIGNALS</span>
-            <Radar size={14} className="text-primary" />
-          </div>
-          <p className="mono-num text-2xl font-bold text-foreground">
-            {k.detections.length ? (
-              <Count value={active.length} />
-            ) : (
-              <span className="text-base font-normal text-muted-foreground">0</span>
-            )}
-          </p>
-          <p className="text-[10px] text-muted-foreground flex items-center justify-between">
-            <span>Active crowd detections</span>
-            <ChevronRight
-              size={12}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </p>
-        </Link>
-
-        <Link
-          to="/map"
-          className="panel p-3.5 space-y-1 block hover:border-warning/60 transition-colors group cursor-pointer"
-        >
-          <div className="flex items-center justify-between text-muted-foreground group-hover:text-warning transition-colors">
-            <span className="trace-label text-[9px]">SEARCH ZONES</span>
-            <CircleDot size={14} className="text-warning" />
-          </div>
-          <p className="mono-num text-2xl font-bold text-warning">
-            {k.zones.length ? (
-              <Count value={k.zones.length} />
-            ) : (
-              <span className="text-base font-normal text-muted-foreground">0</span>
-            )}
-          </p>
-          <p className="text-[10px] text-muted-foreground flex items-center justify-between">
-            <span>Probable search areas</span>
-            <ChevronRight
-              size={12}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </p>
-        </Link>
-
-        <Link
-          to="/map"
-          className="panel p-3.5 space-y-1 block hover:border-primary/60 transition-colors group cursor-pointer"
-        >
-          <div className="flex items-center justify-between text-muted-foreground group-hover:text-primary transition-colors">
-            <span className="trace-label text-[9px]">HEURISTIC CONFIDENCE</span>
-            <Activity size={14} className="text-primary" />
-          </div>
-          <p className="mono-num text-2xl font-bold text-primary">
-            {z ? (
-              <>
-                {z.confidence}
-                <span className="text-sm font-normal text-muted-foreground">%</span>
-              </>
-            ) : (
-              <span className="text-base font-normal text-muted-foreground">No data available</span>
-            )}
-          </p>
-          <p className="text-[10px] text-muted-foreground flex items-center justify-between">
-            <span>{z ? `Radius ±${z.radius} m` : "Awaiting observations"}</span>
-            <ChevronRight
-              size={12}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            />
+          <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            {currentIncident?.location ?? "Field Operations"}
           </p>
         </Link>
 
         <Link
           to="/devices"
-          className="panel p-3.5 space-y-1 block hover:border-success/60 transition-colors group cursor-pointer"
+          className="panel p-4 rounded-xl space-y-1 hover:border-primary/50 transition-all block cursor-pointer min-h-[104px] flex flex-col justify-between shadow-xs hover:shadow-md"
         >
-          <div className="flex items-center justify-between text-muted-foreground group-hover:text-success transition-colors">
-            <span className="trace-label text-[9px]">MEAN BATTERY</span>
-            <Battery size={14} className="text-success" />
-          </div>
-          <p className="mono-num text-2xl font-bold text-success">
-            {k.nodes.length ? (
-              <>
-                {meanBattery}
-                <span className="text-sm font-normal text-muted-foreground">%</span>
-              </>
-            ) : (
-              <span className="text-base font-normal text-muted-foreground">No data available</span>
-            )}
-          </p>
-          <p className="text-[10px] text-muted-foreground flex items-center justify-between">
-            <span>{k.mode === "simulation" ? "Synthetic battery" : "Telemetry level"}</span>
-            <ChevronRight
-              size={12}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </p>
-        </Link>
-      </div>
-
-      {/* Recommended Next Action Banner */}
-      <div className="panel p-3.5 border-l-4 border-l-primary flex flex-wrap items-center justify-between gap-3 bg-card/80">
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2">
-            <span className="trace-label text-[9px] text-primary font-bold">
-              RECOMMENDED NEXT ACTION
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-mono text-muted-foreground uppercase font-semibold tracking-wider">SNIFFERS</span>
+            <span className={cn("p-1 rounded-md", online >= 3 ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400")}>
+              <RadioTower size={13} />
             </span>
-            <span className="text-[10px] text-muted-foreground">· Operational Guidance</span>
           </div>
-          <p className="text-xs font-semibold text-foreground">
-            {online < 3
-              ? "Deploy Additional Sniffer Anchors"
-              : !k.gatewayConnected
-                ? "Connect Physical Hardware Gateway"
-                : z
-                  ? `Dispatch Rescue Team to Sector ${z.id} (±${z.radius} m)`
-                  : "Perimeter Sweep & Radio Channel Monitoring"}
+          <p className="font-bold text-foreground text-xl mono-num tracking-tight">
+            {online} <span className="text-muted-foreground text-xs font-normal">/ {k.nodes.length} online</span>
           </p>
-          <p className="text-[11px] text-muted-foreground">
-            {online < 3
-              ? `Only ${online}/3 required stations active. Position ≥3 non-collinear nodes around the disaster site to enable 2D multilateration.`
-              : !k.gatewayConnected
-                ? "LoRa gateway concentrator offline. Plug in USB bridge or run `python scripts/trace_gateway_daemon.py`."
-                : z
-                  ? `Estimated signal detected with ${z.confidence}% heuristic confidence. Corroborate with geophone acoustic and structural sensors.`
-                  : "No civilian crowd signals exceeding detection threshold. Stations actively scanning 2.4 GHz for BLE / Wi-Fi packets."}
-          </p>
-        </div>
-        <Button asChild size="sm" className="h-8 text-xs shrink-0">
-          <Link to={online < 3 || !k.gatewayConnected ? "/devices" : "/map"}>
-            {online < 3 || !k.gatewayConnected ? "Open Devices & Calibration" : "Inspect on Map"}
-            <ArrowUpRight size={12} className="ml-1" />
-          </Link>
-        </Button>
-      </div>
-
-      {/* Rescue Operations & Survivor Intelligence Quick Access */}
-      <div className="grid md:grid-cols-2 gap-3">
-        <Link
-          to="/history"
-          className="panel p-3.5 space-y-1 block hover:border-primary/60 transition-colors group cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <span className="trace-label text-[9px] text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-              <Users size={12} className="text-primary" />
-              SURVIVOR INTELLIGENCE & CASUALTIES
-            </span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] font-mono",
-                k.survivors.filter((s) => s.status === "awaiting_rescue").length > 0
-                  ? "border-critical/40 text-critical bg-critical/10"
-                  : "border-success/40 text-success bg-success/10",
-              )}
-            >
-              {k.survivors.filter((s) => s.status === "awaiting_rescue").length} Awaiting Extraction
-            </Badge>
-          </div>
-          <p className="font-semibold text-foreground text-sm flex items-center justify-between pt-1">
-            <span>
-              {k.survivors.length} Confirmed Casualties ·{" "}
-              <span className="text-success font-bold">
-                {k.survivors.filter((s) => s.status === "rescued").length} Rescued
-              </span>
-            </span>
-            <ChevronRight
-              size={13}
-              className="text-muted-foreground group-hover:text-primary transition-colors"
-            />
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            Multi-modal corroboration: geophone acoustic + seismic vibration + BLE beacon sessions
+          <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5">
+            <span className={cn("h-1.5 w-1.5 rounded-full", online >= 3 ? "bg-emerald-400" : "bg-amber-400")} />
+            {online >= 3 ? "Multilateration ready" : "≥3 stations required"}
           </p>
         </Link>
 
         <Link
-          to="/history"
-          className="panel p-3.5 space-y-1 block hover:border-primary/60 transition-colors group cursor-pointer"
+          to="/devices"
+          className="panel p-4 rounded-xl space-y-1 hover:border-primary/50 transition-all block cursor-pointer min-h-[104px] flex flex-col justify-between shadow-xs hover:shadow-md"
         >
-          <div className="flex items-center justify-between">
-            <span className="trace-label text-[9px] text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-              <LifeBuoy size={12} className="text-primary" />
-              RESCUE MISSION COORDINATION
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-mono text-muted-foreground uppercase font-semibold tracking-wider">SIGNALS</span>
+            <span className="p-1 rounded-md bg-sky-500/10 text-sky-400">
+              <Radar size={13} />
             </span>
-            <Badge
-              variant="outline"
-              className="text-[10px] font-mono border-warning/40 text-warning bg-warning/10"
-            >
-              {k.operations.filter((o) => o.status !== "Resolved").length} Open Operations
-            </Badge>
           </div>
-          <p className="font-semibold text-foreground text-sm flex items-center justify-between pt-1">
-            <span>
-              {k.operations.filter((o) => o.status === "Rescue In Progress").length} Active Rescue ·{" "}
-              <span className="text-primary font-bold">
-                {k.operations.filter((o) => o.status === "Under Investigation").length}{" "}
-                Investigating
-              </span>
-            </span>
-            <ChevronRight
-              size={13}
-              className="text-muted-foreground group-hover:text-primary transition-colors"
-            />
+          <p className="font-bold text-sky-400 text-xl mono-num tracking-tight">
+            {active.length} <span className="text-muted-foreground text-xs font-normal">active</span>
           </p>
-          <p className="text-[10px] text-muted-foreground">
-            Enforced state lifecycle transitions with chronological audit logging & response
-            interval tracking
+          <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+            {lastPacketTime ? `Last packet ${ago(lastPacketTime)}` : "Awaiting telemetry"}
+          </p>
+        </Link>
+
+        <Link
+          to="/map"
+          className="panel p-4 rounded-xl space-y-1 hover:border-warning/50 transition-all block cursor-pointer min-h-[104px] flex flex-col justify-between shadow-xs hover:shadow-md"
+        >
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-mono text-muted-foreground uppercase font-semibold tracking-wider">ESTIMATE</span>
+            <span className="p-1 rounded-md bg-amber-500/10 text-amber-400">
+              <CircleDot size={13} />
+            </span>
+          </div>
+          <p className="font-bold text-amber-400 text-xl mono-num tracking-tight">
+            {z ? `±${z.radius} m` : "None"}
+          </p>
+          <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5">
+            <span className={cn("h-1.5 w-1.5 rounded-full", z ? "bg-amber-400" : "bg-muted-foreground")} />
+            {z ? `${z.confidence}% conf · ${z.residual?.toFixed(1) ?? "0.0"}m res` : "Insufficient signals"}
+          </p>
+        </Link>
+
+        <Link
+          to="/settings"
+          className="panel p-4 rounded-xl space-y-1 hover:border-primary/50 transition-all block cursor-pointer min-h-[104px] flex flex-col justify-between shadow-xs hover:shadow-md col-span-2 md:col-span-1"
+        >
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-mono text-muted-foreground uppercase font-semibold tracking-wider">GATEWAY</span>
+            <span className={cn("h-2 w-2 rounded-full", k.gatewayConnected ? "bg-emerald-400 shadow-sm shadow-emerald-400/50" : "bg-rose-500 animate-pulse")} />
+          </div>
+          <p className="font-bold text-foreground text-sm tracking-tight truncate">
+            {readinessState.label}
+          </p>
+          <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5">
+            <span className={cn("h-1.5 w-1.5 rounded-full", k.gatewayConnected ? "bg-emerald-400" : "bg-rose-400")} />
+            {k.gatewayConnected ? "LoRa Gateway Online" : "Gateway Offline"}
           </p>
         </Link>
       </div>
 
-      {/* Tactical Operating Picture */}
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Radar size={15} className="text-primary" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-              Tactical Operating Picture
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm" className="h-7 text-xs">
-              <Link to="/map">
-                Full Map View
-                <ArrowUpRight size={13} className="ml-1" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-        <TacticalScene
-          nodes={k.nodes}
-          zones={k.zones}
-          calibration={k.calibration}
-          selectedNode={selected}
-          onSelectNode={setSelected}
-          className="trace-map"
-        />
-      </div>
+      {/* Main Command Workspace: 2/3 Tactical Map + 1/3 Tactical Intelligence Feed */}
+      <div className="grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-4 items-start">
+        {/* Left Column: Hero Tactical Operating Picture */}
+        <div className="space-y-3.5">
+          <div className="panel p-4 rounded-xl space-y-3 shadow-md">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-border/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+                  <Radar size={15} />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Tactical Operating Picture
+                  </h2>
+                  <p className="text-[10px] text-muted-foreground">Real-time multilateration & structural mesh</p>
+                </div>
+              </div>
 
-      <Safety />
-      <Transport />
-
-      {/* Tactical Details Grid */}
-      <div className="grid gap-4 xl:grid-cols-[1fr_1fr_1.15fr]">
-        {/* Active Signal Source & Search Zone */}
-        <Band
-          title="Search-Priority Zone"
-          action={
-            <div className="flex items-center gap-2">
-              <span className="trace-label text-warning mono-num">
-                {k.mode === "simulation" ? "SYNTHETIC ESTIMATE" : "HARDWARE ESTIMATE"}
-              </span>
-              {z && (
+              <div className="flex items-center gap-2">
                 <Button
-                  asChild
-                  variant="outline"
+                  variant={k.running ? "outline" : "default"}
                   size="sm"
-                  className="h-6 px-2 text-[10px] border-warning/40 text-warning hover:bg-warning/10"
+                  onClick={k.running ? k.pause : k.start}
+                  disabled={k.mode === "live"}
+                  className={cn(
+                    "h-8 text-xs px-3 font-semibold",
+                    k.running
+                      ? "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                      : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold",
+                  )}
                 >
+                  {k.running ? (
+                    <>
+                      <Pause size={12} className="mr-1 text-amber-400" />
+                      Pause
+                    </>
+                  ) : (
+                    <>
+                      <Play size={12} className="mr-1 text-slate-950" />
+                      Resume
+                    </>
+                  )}
+                </Button>
+                <Button asChild size="sm" className="h-8 text-xs px-3 font-semibold shadow-md shadow-sky-500/20">
                   <Link to="/map">
-                    Inspect on Map <ArrowUpRight size={11} className="ml-1" />
+                    Full Tactical Map
+                    <ArrowUpRight size={13} className="ml-1" />
                   </Link>
                 </Button>
-              )}
+              </div>
             </div>
-          }
-        >
-          {z ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-warning node-ring" />
-                  <strong className="mono-num text-xs text-foreground">
-                    Zone {z.id} ({k.detections[0]?.tempId ?? "Anonymous signal"})
-                  </strong>
-                </div>
-                <PriorityBadge priority={z.priority} />
-              </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="rounded bg-secondary/50 p-2.5 border border-border">
-                  <p className="trace-label text-[9px]">Heuristic Confidence</p>
-                  <p className="text-xl font-bold mono-num text-warning mt-0.5">{z.confidence}%</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Residual error: {z.residual?.toFixed(1)} m
-                  </p>
-                </div>
-                <div className="rounded bg-secondary/50 p-2.5 border border-border">
-                  <p className="trace-label text-[9px]">Confidence Radius</p>
-                  <p className="text-xl font-bold mono-num text-foreground mt-0.5">
-                    ±{z.radius}
-                    <span className="text-xs font-normal text-muted-foreground"> m</span>
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {z.contributingNodes.length} contributing sniffers
-                  </p>
-                </div>
-              </div>
+            {/* The 2D/3D Tactical Canvas */}
+            <TacticalScene
+              nodes={k.nodes}
+              zones={k.zones}
+              calibration={k.calibration}
+              selectedNode={selected}
+              onSelectNode={setSelected}
+              className="trace-map min-h-[460px] lg:min-h-[520px] rounded-xl"
+            />
+          </div>
 
-              <div className="space-y-1.5 pt-1">
-                <p className="trace-label text-[9px]">Multimodal Evidence Fusion</p>
-                <EvidenceBars evidence={z.evidence} />
+          {/* Operational Guidance Bar */}
+          <div className="panel p-4 rounded-xl border-l-4 border-l-sky-500 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-card/95 via-card/90 to-card/95 shadow-md">
+            <div className="space-y-1 max-w-xl">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold tracking-wider text-sky-400 uppercase px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/25">
+                  RECOMMENDED NEXT ACTION
+                </span>
+                <span className="text-[11px] text-muted-foreground">· Tactical Guidance</span>
               </div>
-
-              <p className="text-[10px] text-muted-foreground/80 pt-1">
-                Contributing Nodes: {z.contributingNodes.join(" · ")} · Weighted least-squares
-                estimate
+              <p className="text-sm font-bold text-foreground">
+                {online < 3
+                  ? "Deploy Additional Sniffer Anchors"
+                  : !k.gatewayConnected
+                    ? "Connect Physical Hardware Gateway"
+                    : z
+                      ? `Dispatch SAR Team to Sector Zone ${z.id} (±${z.radius} m)`
+                      : "Perimeter Sweep & Radio Channel Monitoring"}
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {online < 3
+                  ? `Only ${online}/3 required stations active. Position ≥3 non-collinear nodes around disaster site for 2D multilateration.`
+                  : !k.gatewayConnected
+                    ? "LoRa gateway concentrator offline. Connect USB serial bridge or start gateway daemon."
+                    : z
+                      ? `Estimated transmitter detected with ${z.confidence}% confidence. Corroborate with geophone acoustic and thermal sensors.`
+                      : "Stations actively scanning 2.4 GHz for BLE advertising frames and Wi-Fi probe requests."}
               </p>
             </div>
-          ) : (
-            <div className="space-y-2.5 py-2">
-              <div className="p-3 rounded-md bg-warning/5 border border-warning/20 text-xs text-warning space-y-1.5">
-                <div className="flex items-center gap-1.5 font-semibold">
-                  <AlertTriangle size={14} />
-                  <span>
-                    {k.estimationMessage ||
-                      (online < 3
-                        ? `Insufficient Anchor Coverage (${online}/3 Online)`
-                        : !k.gatewayConnected
-                          ? "Gateway Concentrator Disconnected"
-                          : "Awaiting Crowd-Signal Telemetry")}
-                  </span>
+            <Button asChild size="sm" className="h-8.5 text-xs px-4 font-semibold shrink-0 shadow-md shadow-sky-500/20">
+              <Link to={online < 3 || !k.gatewayConnected ? "/devices" : "/map"}>
+                {online < 3 || !k.gatewayConnected ? "View Devices & Gateway" : "Inspect Search Zone"}
+                <ArrowUpRight size={13} className="ml-1.5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Column: Tactical Intelligence Feed */}
+        <div className="space-y-3.5">
+          {/* Active Search Zone Analysis */}
+          <div className="panel p-4 rounded-xl space-y-3.5 shadow-md">
+            <div className="flex items-center justify-between pb-2 border-b border-border/80">
+              <div className="flex items-center gap-2">
+                <CircleDot size={15} className="text-amber-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Search-Priority Zone
+                </h3>
+              </div>
+              {z && <PriorityBadge priority={z.priority} />}
+            </div>
+
+            {z ? (
+              <div className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="p-3 rounded-lg bg-secondary/60 border border-border/80 shadow-xs">
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">Confidence</span>
+                    <p className="text-xl font-bold mono-num text-amber-400 mt-0.5">{z.confidence}%</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Residual: {z.residual?.toFixed(1) ?? "0.0"} m</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-secondary/60 border border-border/80 shadow-xs">
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">Uncertainty</span>
+                    <p className="text-xl font-bold mono-num text-foreground mt-0.5">±{z.radius} <span className="text-xs font-normal text-muted-foreground">m</span></p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{z.contributingNodes.length} sniffers locked</p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  {online < 3
-                    ? "Multilateration requires at least 3 reporting sniffer stations to resolve a non-degenerate 2D spatial intersection."
-                    : !k.gatewayConnected
-                      ? "The edge LoRa gateway is offline. Node heartbeats and RF observations cannot be transported."
-                      : "Sensors are listening on 2.4 GHz for civilian BLE advertising frames and Wi-Fi probe requests."}
+
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">Sensor Fusion Weights</span>
+                  <EvidenceBars evidence={z.evidence} />
+                </div>
+
+                <div className="pt-2 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60">
+                  <span>Anchors: <strong className="text-foreground">{z.contributingNodes.join(" · ") || "N01, N02, N03"}</strong></span>
+                  <Link to="/map" className="text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1 font-semibold">
+                    Map View <ArrowUpRight size={11} />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-center space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">
+                  No valid signal observations received yet.
+                </p>
+                <p className="text-[11px] text-muted-foreground/70">
+                  {online < 3 ? "Waiting for ≥3 reporting stations" : "Listening for BLE and Wi-Fi packets"}
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-mono">
-                <div className="p-2 rounded bg-card border border-border">
-                  <span className="text-muted-foreground block text-[9px]">SNIFFERS</span>
-                  <span
-                    className={online >= 3 ? "text-success font-bold" : "text-critical font-bold"}
-                  >
-                    {online} / 3 req
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-card border border-border">
-                  <span className="text-muted-foreground block text-[9px]">GATEWAY</span>
-                  <span
-                    className={
-                      k.gatewayConnected ? "text-success font-bold" : "text-critical font-bold"
-                    }
-                  >
-                    {k.gatewayConnected ? "ONLINE" : "OFFLINE"}
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-card border border-border">
-                  <span className="text-muted-foreground block text-[9px]">SIGNALS</span>
-                  <span
-                    className={
-                      active.length > 0
-                        ? "text-primary font-bold"
-                        : "text-muted-foreground font-bold"
-                    }
-                  >
-                    {active.length} active
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </Band>
-
-        {/* Node Readiness */}
-        <Band
-          title="Sensor Network Status"
-          action={
-            <Button asChild variant="link" size="sm" className="h-6 text-xs text-primary p-0">
-              <Link to="/devices">
-                Manage Devices
-                <ChevronRight size={13} className="ml-1" />
-              </Link>
-            </Button>
-          }
-        >
-          <div className="space-y-2">
-            {k.nodes.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                className="w-full flex items-center justify-between p-2.5 rounded-md border border-border bg-card/60 hover:bg-secondary/60 text-left transition-colors"
-                onClick={() => setSelected(n.id)}
-              >
-                <div>
-                  <p className="text-xs font-semibold mono-num text-foreground">
-                    {n.id}
-                    <span className="text-muted-foreground ml-2 font-normal">
-                      {n.type === "gateway" ? "Gateway Tower" : "Sniffer Station"}
-                    </span>
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {n.status === "offline"
-                      ? "Heartbeat Lost"
-                      : `${n.loraRssi.toFixed(0)} dBm LoRa · SNR ${n.loraSnr.toFixed(1)} dB`}
-                  </p>
-                </div>
-                <div className="text-right space-y-0.5">
-                  <StatusDot status={n.status} />
-                  <p className="text-[10px] mono-num text-muted-foreground">
-                    {n.battery.toFixed(0)}% batt
-                  </p>
-                </div>
-              </button>
-            ))}
+            )}
           </div>
-        </Band>
 
-        {/* Live Observation / Event Feed */}
-        <Band
-          title={
-            <div className="flex items-center gap-2">
-              <div className="flex items-center rounded border border-border p-0.5 bg-secondary/50 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setFeedTab("detections")}
-                  className={cn(
-                    "px-2 py-0.5 rounded transition-colors",
-                    feedTab === "detections"
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Signals ({active.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFeedTab("logs")}
-                  className={cn(
-                    "px-2 py-0.5 rounded transition-colors",
-                    feedTab === "logs"
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Logs ({k.logs.length})
-                </button>
+          {/* Live Crowd Signals Feed */}
+          <div className="panel p-4 rounded-xl space-y-3 shadow-md">
+            <div className="flex items-center justify-between pb-2 border-b border-border/80">
+              <div className="flex items-center gap-2">
+                <Radar size={15} className="text-sky-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Live Crowd Detections
+                </h3>
               </div>
+              <Badge variant="outline" className="text-[9px] font-mono mono-num px-2 py-0.5">
+                {active.length} active
+              </Badge>
             </div>
-          }
-          action={
-            <Button asChild variant="link" size="sm" className="h-6 text-xs text-primary p-0">
-              <Link to="/history">
-                View Logs & History
-                <ChevronRight size={13} className="ml-1" />
-              </Link>
-            </Button>
-          }
-        >
-          {feedTab === "detections" ? (
-            <div className="max-h-72 overflow-y-auto trace-scroll space-y-2">
-              {k.detections.slice(0, 6).map((d) => (
+
+            <div className="space-y-2 max-h-[220px] overflow-y-auto trace-scroll pr-1">
+              {k.detections.slice(0, 5).map((d) => (
                 <div
                   key={d.id}
-                  className="p-2 rounded bg-card/60 border border-border flex items-center justify-between text-xs hover:bg-secondary/40 transition-colors"
+                  className="p-2.5 rounded-lg bg-secondary/40 border border-border/80 flex items-center justify-between text-xs hover:bg-secondary/70 transition-all shadow-xs"
                 >
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold mono-num text-foreground">{d.tempId}</span>
-                      <Badge variant="outline" className="text-[9px] px-1 py-0">
+                  <div className="min-w-0 pr-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground text-xs truncate max-w-[130px] font-mono">
+                        {d.tempId}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[9px] uppercase font-mono font-bold px-1.5 py-0.2 rounded border",
+                          d.signalType === "BLE"
+                            ? "border-sky-500/40 text-sky-400 bg-sky-500/10"
+                            : "border-amber-500/40 text-amber-400 bg-amber-500/10",
+                        )}
+                      >
                         {d.signalType}
-                      </Badge>
+                      </span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Station {d.nodeId} · Est. range {d.distance.toFixed(1)} m
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Station {d.nodeId} · Est. ±{d.distance.toFixed(1)} m
                     </p>
                   </div>
-                  <div className="text-right">
-                    <span className="mono-num font-semibold text-foreground">{d.rssi} dBm</span>
+                  <div className="text-right shrink-0">
+                    <span
+                      className={cn(
+                        "font-mono font-bold text-xs",
+                        d.rssi > -65 ? "text-emerald-400" : d.rssi > -80 ? "text-sky-400" : "text-muted-foreground",
+                      )}
+                    >
+                      {d.rssi} dBm
+                    </span>
                     <p className="text-[10px] text-muted-foreground">{ago(d.ts)}</p>
                   </div>
                 </div>
               ))}
-              {!k.detections.length && (
-                <EmptyState text="Awaiting crowd-signal observations from sniffer stations." />
-              )}
-            </div>
-          ) : (
-            <div className="max-h-72 overflow-y-auto trace-scroll space-y-2.5">
-              {k.logs.slice(0, 6).map((l) => (
-                <div key={l.id} className="event-arrival border-l-2 border-border pl-2.5 py-0.5">
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span
-                      className={
-                        l.level === "critical"
-                          ? "text-critical font-medium"
-                          : l.level === "warn"
-                            ? "text-warning font-medium"
-                            : "text-primary font-medium"
-                      }
-                    >
-                      {l.source}
-                    </span>
-                    <span className="text-muted-foreground mono-num">
-                      {new Date(l.ts).toLocaleTimeString("en-GB")}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-foreground/80 font-mono mt-0.5 truncate">
-                    {l.message}
-                  </p>
-                </div>
-              ))}
-              {!k.logs.length && (
+              {k.detections.length === 0 && (
                 <p className="text-xs text-muted-foreground py-4 text-center">
-                  Awaiting verified hardware telemetry packets.
+                  No civilian crowd signals detected.
                 </p>
               )}
             </div>
-          )}
-        </Band>
+
+            <div className="pt-2 border-t border-border/60 text-right">
+              <Link to="/devices" className="text-xs text-sky-400 hover:text-sky-300 hover:underline inline-flex items-center gap-1 font-semibold">
+                View All Signals & Filtering <ChevronRight size={13} />
+              </Link>
+            </div>
+          </div>
+
+          {/* Casualties & SAR Mission Status */}
+          <div className="panel p-3.5 rounded-xl space-y-2.5 shadow-md">
+            <div className="flex items-center justify-between pb-1.5 border-b border-border/80">
+              <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
+                <Users size={13} className="text-sky-400" />
+                SAR Operations Summary
+              </span>
+              <Link to="/history" className="text-xs text-sky-400 hover:text-sky-300 hover:underline font-semibold">
+                History
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 rounded-lg bg-secondary/50 border border-border/80">
+                <span className="text-[10px] text-muted-foreground block font-mono">Casualties</span>
+                <span className="font-bold text-foreground text-xs mt-1 block">
+                  {k.survivors.length} confirmed · <span className="text-emerald-400">{k.survivors.filter((s) => s.status === "rescued").length} rescued</span>
+                </span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-secondary/50 border border-border/80">
+                <span className="text-[10px] text-muted-foreground block font-mono">Active Missions</span>
+                <span className="font-bold text-foreground text-xs mt-1 block">
+                  {k.operations.length} registered · <span className="text-sky-400">{k.operations.filter((o) => o.status === "Rescue In Progress").length} in progress</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <NodeDetail
@@ -5846,8 +5508,13 @@ export function LocalizationSettings() {
    P. SETTINGS
    ========================================================================= */
 
-export function Settings() {
+export function Settings({
+  initialTab = "connections",
+}: {
+  initialTab?: "connections" | "simulation" | "health" | "preferences";
+} = {}) {
   const k = useKavach();
+  const [activeTab, setActiveTab] = useState<"connections" | "simulation" | "health" | "preferences">(initialTab);
   const [checking, setChecking] = useState(false);
 
   const check = async () => {
@@ -5922,134 +5589,186 @@ export function Settings() {
   return (
     <div className="space-y-5">
       <Heading
-        category="SYSTEM"
-        title="Settings"
-        sub="Tactical display preferences, localization engine calibration, environment presets, and gateway connection"
+        category="CONFIGURATION"
+        title="Settings & Hardware"
+        sub="Unified gateway connections, Web Serial bridge, simulation scenario lab, system health checks, and platform preferences"
         action={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={handleExportConfig}
-            >
-              <Download size={13} className="mr-1.5" />
-              Export Settings JSON
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs text-muted-foreground hover:text-foreground"
-              onClick={handleResetDefaults}
-            >
-              <RotateCcw size={13} className="mr-1.5" />
-              Reset to Defaults
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid lg:grid-cols-2 gap-5">
-        <Band title="Simulation & Lifecycle Parameters">
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <NumberField
-              label="Signal Expiry (s)"
-              value={k.expiry}
-              min={5}
-              max={300}
-              onChange={(expiry) => k.configure({ expiry })}
-            />
-            <NumberField
-              label="Tick Interval (ms)"
-              value={k.rate}
-              min={500}
-              max={10000}
-              onChange={(rate) => k.configure({ rate })}
-            />
-            <NumberField
-              label="RF Noise (± dB)"
-              value={k.noise}
-              min={0}
-              max={15}
-              onChange={(noise) => k.configure({ noise })}
-            />
-            <NumberField
-              label="Obstruction Loss (dB)"
-              value={k.obstruction}
-              min={0}
-              max={20}
-              onChange={(obstruction) => k.configure({ obstruction })}
-            />
-          </div>
-        </Band>
-
-        <Band title="Gateway Base URL & Connectivity">
-          <label className="block text-xs text-muted-foreground space-y-1">
-            <span>Gateway HTTP Endpoint URL</span>
-            <Input
-              value={k.apiUrl}
-              className="h-8 text-xs font-mono"
-              placeholder="https://gateway.example.local:8080"
-              onChange={(e) => k.configure({ apiUrl: e.target.value })}
-            />
-          </label>
-          <div className="pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={checking || !k.apiUrl.trim()}
-              onClick={check}
-            >
-              {checking ? "Checking Connection…" : "Test API Connection"}
-            </Button>
-          </div>
-          <p className="text-[11px] text-muted-foreground pt-1">
-            Status: <span className="font-medium text-foreground">{k.apiStatus}</span>
-          </p>
-        </Band>
-
-        <Band title="Operational Data Persistence & Client Cache">
-          <div className="space-y-2.5 text-xs">
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Operational records (rescue missions, confirmed casualties, response notes) are
-              persisted to browser local storage via schema versioning. Records survive tab
-              refreshes. Credentials are never written to browser storage.
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-              <div className="p-2.5 rounded bg-card border border-border">
-                <span className="text-muted-foreground text-[10px]">Active Operations</span>
-                <p className="font-semibold text-foreground mono-num mt-0.5">
-                  {k.operations.length} registered
-                </p>
-              </div>
-              <div className="p-2.5 rounded bg-card border border-border">
-                <span className="text-muted-foreground text-[10px]">Confirmed Casualties</span>
-                <p className="font-semibold text-foreground mono-num mt-0.5">
-                  {k.survivors.length} recorded
-                </p>
-              </div>
-            </div>
-            <div className="pt-2">
+          activeTab === "preferences" ? (
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 text-xs border-critical/40 text-critical hover:bg-critical/10"
-                onClick={() => {
-                  k.clearPersistedData();
-                  toast.success("Operational persistence cache cleared");
-                }}
+                className="h-8 text-xs"
+                onClick={handleExportConfig}
               >
-                <Trash2 size={13} className="mr-1.5" />
-                Clear Operational Data Cache
+                <Download size={13} className="mr-1.5" />
+                Export Settings JSON
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleResetDefaults}
+              >
+                <RotateCcw size={13} className="mr-1.5" />
+                Reset to Defaults
               </Button>
             </div>
-          </div>
-        </Band>
+          ) : undefined
+        }
+      />
+
+      {/* Sub-tab navigation */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-3">
+        <Button
+          variant={activeTab === "connections" ? "default" : "outline"}
+          size="sm"
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setActiveTab("connections")}
+        >
+          <Cpu size={13} />
+          Hardware & Connections
+        </Button>
+        <Button
+          variant={activeTab === "simulation" ? "default" : "outline"}
+          size="sm"
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setActiveTab("simulation")}
+        >
+          <TestTube2 size={13} />
+          Simulation Lab
+        </Button>
+        <Button
+          variant={activeTab === "health" ? "default" : "outline"}
+          size="sm"
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setActiveTab("health")}
+        >
+          <HeartPulse size={13} />
+          System Health & Readiness
+        </Button>
+        <Button
+          variant={activeTab === "preferences" ? "default" : "outline"}
+          size="sm"
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setActiveTab("preferences")}
+        >
+          <Settings2 size={13} />
+          Platform Preferences & Cache
+        </Button>
       </div>
 
-      <LocalizationSettings />
-      <Limitations />
+      {activeTab === "connections" && <Hardware />}
+
+      {activeTab === "simulation" && <Simulation />}
+
+      {activeTab === "health" && <Health />}
+
+      {activeTab === "preferences" && (
+        <div className="space-y-5">
+          <div className="grid lg:grid-cols-2 gap-5">
+            <Band title="Simulation & Lifecycle Parameters">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <NumberField
+                  label="Signal Expiry (s)"
+                  value={k.expiry}
+                  min={5}
+                  max={300}
+                  onChange={(expiry) => k.configure({ expiry })}
+                />
+                <NumberField
+                  label="Tick Interval (ms)"
+                  value={k.rate}
+                  min={500}
+                  max={10000}
+                  onChange={(rate) => k.configure({ rate })}
+                />
+                <NumberField
+                  label="RF Noise (± dB)"
+                  value={k.noise}
+                  min={0}
+                  max={15}
+                  onChange={(noise) => k.configure({ noise })}
+                />
+                <NumberField
+                  label="Obstruction Loss (dB)"
+                  value={k.obstruction}
+                  min={0}
+                  max={20}
+                  onChange={(obstruction) => k.configure({ obstruction })}
+                />
+              </div>
+            </Band>
+
+            <Band title="Gateway Base URL & Connectivity">
+              <label className="block text-xs text-muted-foreground space-y-1">
+                <span>Gateway HTTP Endpoint URL</span>
+                <Input
+                  value={k.apiUrl}
+                  className="h-8 text-xs font-mono"
+                  placeholder="https://gateway.example.local:8080"
+                  onChange={(e) => k.configure({ apiUrl: e.target.value })}
+                />
+              </label>
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={checking || !k.apiUrl.trim()}
+                  onClick={check}
+                >
+                  {checking ? "Checking Connection…" : "Test API Connection"}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground pt-1">
+                Status: <span className="font-medium text-foreground">{k.apiStatus}</span>
+              </p>
+            </Band>
+
+            <Band title="Operational Data Persistence & Client Cache">
+              <div className="space-y-2.5 text-xs">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Operational records (rescue missions, confirmed casualties, response notes) are
+                  persisted to browser local storage via schema versioning. Records survive tab
+                  refreshes. Credentials are never written to browser storage.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div className="p-2.5 rounded bg-card border border-border">
+                    <span className="text-muted-foreground text-[10px]">Active Operations</span>
+                    <p className="font-semibold text-foreground mono-num mt-0.5">
+                      {k.operations.length} registered
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded bg-card border border-border">
+                    <span className="text-muted-foreground text-[10px]">Confirmed Casualties</span>
+                    <p className="font-semibold text-foreground mono-num mt-0.5">
+                      {k.survivors.length} recorded
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs border-critical/40 text-critical hover:bg-critical/10"
+                    onClick={() => {
+                      k.clearPersistedData();
+                      toast.success("Operational persistence cache cleared");
+                    }}
+                  >
+                    <Trash2 size={13} className="mr-1.5" />
+                    Clear Operational Data Cache
+                  </Button>
+                </div>
+              </div>
+            </Band>
+          </div>
+
+          <LocalizationSettings />
+          <Limitations />
+        </div>
+      )}
     </div>
   );
 }
@@ -7412,8 +7131,8 @@ export function Limitations() {
           probability.
         </p>
         <p>
-          • This platform aids tactical search triage; it does not replace trained canine
-          or physical SAR teams.
+          • This platform aids tactical search triage; it does not replace trained canine or
+          physical SAR teams.
         </p>
       </div>
     </section>
@@ -8246,9 +7965,9 @@ export function TraceView({ view }: { view: string }) {
   const pages: Record<string, ReactNode> = {
     overview: <Overview />,
     map: <Tactical />,
-    devices: <DevicesCalibration />,
+    devices: <DevicesCalibration initialTab="network" />,
     history: <IncidentHistory />,
-    calibration: <DevicesCalibration />,
+    calibration: <DevicesCalibration initialTab="calibration" />,
     survivors: <SurvivorIntelligence />,
     operations: <RescueOperations />,
     incidents: <Incidents />,

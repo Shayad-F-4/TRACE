@@ -21,6 +21,7 @@ import {
   Settings2,
   Shield,
   Siren,
+  SlidersHorizontal,
   TestTube2,
   Users,
   Wifi,
@@ -42,12 +43,19 @@ export interface NavGroupDef {
   items: NavItemDef[];
 }
 
-export const NAV_GROUPS: NavGroupDef[] = [
+export const PRIMARY_NAV: NavItemDef[] = [
+  { to: "/", label: "Command Center", icon: Gauge },
+  { to: "/map", label: "Live Map", icon: Map },
+  { to: "/devices", label: "Devices & Signals", icon: RadioTower, badgeKey: "nodes" },
+  { to: "/calibration", label: "Calibration", icon: SlidersHorizontal },
+  { to: "/history", label: "Incident History", icon: History },
+  { to: "/settings", label: "Settings & Hardware", icon: Settings2 },
+];
+
+export const SECONDARY_GROUPS: NavGroupDef[] = [
   {
     name: "TACTICAL OPERATIONS",
     items: [
-      { to: "/", label: "Command Center", icon: Gauge },
-      { to: "/map", label: "Live Tactical Map", icon: Map },
       { to: "/incidents", label: "Incidents", icon: Siren },
       { to: "/detections", label: "Signal Detections", icon: Radar, badgeKey: "detections" },
       { to: "/survivors", label: "Survivors Registry", icon: Users },
@@ -55,12 +63,11 @@ export const NAV_GROUPS: NavGroupDef[] = [
     ],
   },
   {
-    name: "HARDWARE & RF CALIBRATION",
+    name: "HARDWARE & SENSORS",
     items: [
-      { to: "/devices", label: "Devices & Calibration", icon: RadioTower, badgeKey: "nodes" },
       { to: "/nodes", label: "Sensor Nodes", icon: Cpu },
       { to: "/gateway", label: "Gateway Concentrator", icon: Wifi },
-      { to: "/hardware", label: "Hardware Integration", icon: Activity },
+      { to: "/hardware", label: "Hardware Setup", icon: Activity },
       { to: "/topology", label: "Network Topology", icon: GitBranch },
     ],
   },
@@ -69,7 +76,6 @@ export const NAV_GROUPS: NavGroupDef[] = [
     items: [
       { to: "/simulation", label: "Simulation Lab", icon: TestTube2 },
       { to: "/analytics", label: "Analytics & Telemetry", icon: Activity },
-      { to: "/history", label: "Incident History", icon: History },
       { to: "/logs", label: "Event Logs", icon: ScrollText },
       { to: "/reports", label: "Operational Reports", icon: FileText },
     ],
@@ -80,9 +86,16 @@ export const NAV_GROUPS: NavGroupDef[] = [
       { to: "/alerts", label: "Alerts & Warnings", icon: Bell, badgeKey: "alerts" },
       { to: "/health", label: "System Health", icon: Shield },
       { to: "/api-docs", label: "API Docs (OpenAPI)", icon: FileCode2 },
-      { to: "/settings", label: "System Settings", icon: Settings2 },
     ],
   },
+];
+
+export const NAV_GROUPS: NavGroupDef[] = [
+  {
+    name: "PRIMARY NAVIGATION",
+    items: PRIMARY_NAV,
+  },
+  ...SECONDARY_GROUPS,
 ];
 
 export const NAV = NAV_GROUPS.flatMap((g) => g.items.map((i) => [i.to, i.label, i.icon] as const));
@@ -110,7 +123,6 @@ export function TraceShell({ children }: { children: ReactNode }) {
   const [notices, setNotices] = useState(false);
   const [profile, setProfile] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
-
   useEffect(() => setOpen(false), [path]);
 
   const unackAlerts = k.alerts.filter((a) => !a.acknowledged).length;
@@ -179,61 +191,62 @@ export function TraceShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 overflow-y-auto trace-scroll px-2.5 py-4 space-y-4">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.name} className="space-y-1">
-              <p
-                className={cn(
-                  "trace-label text-[9px] font-semibold tracking-wider text-muted-foreground/70 px-2.5 py-1 select-none",
-                  collapsed && "lg:hidden",
-                )}
-              >
-                {group.name}
-              </p>
-              {group.items.map((item) => {
-                const isActive = path === item.to;
-                const Icon = item.icon;
-                let badgeContent: ReactNode = null;
-                if (item.badgeKey === "alerts" && unackAlerts > 0) {
-                  badgeContent = (
-                    <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-warning/20 text-warning border border-warning/30 mono-num">
-                      {unackAlerts}
-                    </span>
-                  );
-                } else if (item.badgeKey === "detections" && activeDetections > 0) {
-                  badgeContent = (
-                    <span className="ml-auto text-[10px] px-1.5 py-0.2 rounded-full bg-primary/15 text-primary border border-primary/25 mono-num">
-                      {activeDetections}
-                    </span>
-                  );
-                }
-
-                return (
-                  <Button
-                    key={item.to}
-                    asChild
-                    variant="ghost"
-                    className={cn(
-                      "w-full justify-start h-9 text-xs px-2.5 rounded transition-colors",
-                      isActive
-                        ? "border-l-2 border-primary bg-sidebar-accent text-primary font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50",
-                      collapsed && "lg:justify-center lg:px-0",
-                    )}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    <Link to={item.to}>
-                      <Icon className="shrink-0" size={16} />
-                      <span className={cn("truncate ml-2.5", collapsed && "lg:hidden")}>
-                        {item.label}
-                      </span>
-                      {!collapsed && badgeContent}
-                    </Link>
-                  </Button>
+        <nav className="flex-1 overflow-y-auto trace-scroll px-2.5 py-3 space-y-3">
+          {/* Primary 6 Navigation Items */}
+          <div className="space-y-1">
+            <p
+              className={cn(
+                "trace-label text-[9px] font-semibold tracking-wider text-primary px-2.5 py-1 select-none flex items-center justify-between",
+                collapsed && "lg:hidden",
+              )}
+            >
+              <span>PRIMARY COMMAND</span>
+              <span className="text-[8px] px-1 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
+                CORE
+              </span>
+            </p>
+            {PRIMARY_NAV.map((item) => {
+              const isActive = path === item.to;
+              const Icon = item.icon;
+              let badgeContent: ReactNode = null;
+              if (item.badgeKey === "nodes" && onlineNodes > 0) {
+                badgeContent = (
+                  <span className="ml-auto text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    {onlineNodes} on
+                  </span>
                 );
-              })}
-            </div>
-          ))}
+              }
+              return (
+                <Button
+                  key={item.to}
+                  asChild
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start h-9 text-xs px-2.5 rounded transition-all",
+                    isActive
+                      ? "border-l-2 border-primary bg-primary/15 text-primary font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60",
+                    collapsed && "lg:justify-center lg:px-0",
+                  )}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <Link to={item.to}>
+                    <Icon
+                      className={cn(
+                        "shrink-0",
+                        isActive ? "text-primary" : "text-muted-foreground",
+                      )}
+                      size={16}
+                    />
+                    <span className={cn("truncate ml-2.5", collapsed && "lg:hidden")}>
+                      {item.label}
+                    </span>
+                    {!collapsed && badgeContent}
+                  </Link>
+                </Button>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Sidebar footer info */}
@@ -284,21 +297,22 @@ export function TraceShell({ children }: { children: ReactNode }) {
             >
               <Menu size={18} />
             </Button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                <span className="font-semibold text-primary">TRACE</span>
-                <span>/</span>
-                <span className="uppercase tracking-wider">{currentGroup}</span>
-              </div>
-              <h1 className="text-sm font-semibold text-foreground truncate">{currentTitle}</h1>
+            <div className="shrink-0 flex items-center gap-2.5">
+              <span className="font-bold text-xs tracking-wider text-primary font-mono px-2 py-0.5 rounded-md bg-primary/10 border border-primary/25 shadow-xs">
+                TRACE
+              </span>
+              <span className="text-muted-foreground/40 text-xs font-mono">/</span>
+              <h1 className="text-sm font-bold text-foreground tracking-tight whitespace-nowrap">
+                {currentTitle}
+              </h1>
             </div>
           </div>
 
           {/* Right Header: Active Incident, Mode Indicator, Gateway Status, Clock & Alerts */}
-          <div className="flex items-center gap-2.5 text-xs">
+          <div className="flex items-center gap-2 text-xs">
             {/* Active Incident Selector */}
-            <div className="hidden md:flex items-center gap-1.5 border border-border rounded px-2.5 py-1 bg-card">
-              <span className="text-[9px] trace-label text-muted-foreground">INCIDENT</span>
+            <div className="hidden lg:flex items-center gap-1.5 border border-border/80 rounded-lg px-2.5 h-8 bg-card/70 shadow-xs">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase font-semibold">INCIDENT</span>
               <select
                 aria-label="Active incident"
                 value={k.incidentId}
@@ -314,14 +328,14 @@ export function TraceShell({ children }: { children: ReactNode }) {
             </div>
 
             {/* Application Mode Switch */}
-            <div className="flex items-center border border-border rounded overflow-hidden bg-card text-[11px]">
+            <div className="flex items-center border border-border/80 rounded-lg overflow-hidden bg-card/70 text-xs p-0.5 h-8 shadow-xs">
               <button
                 type="button"
                 onClick={() => k.setMode("simulation")}
                 className={cn(
-                  "px-2.5 py-1 flex items-center gap-1.5 transition-colors font-medium",
+                  "px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all font-medium text-xs h-full cursor-pointer",
                   k.mode === "simulation"
-                    ? "bg-warning/20 text-warning border-r border-warning/30"
+                    ? "bg-warning/20 text-warning border border-warning/40 font-semibold shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 title="Synthetic multi-sensor simulation mode"
@@ -332,15 +346,15 @@ export function TraceShell({ children }: { children: ReactNode }) {
                     k.mode === "simulation" ? "bg-warning animate-pulse" : "bg-muted-foreground",
                   )}
                 />
-                Simulation
+                Sim
               </button>
               <button
                 type="button"
                 onClick={() => k.setMode("live")}
                 className={cn(
-                  "px-2.5 py-1 flex items-center gap-1.5 transition-colors font-medium",
+                  "px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all font-medium text-xs h-full cursor-pointer",
                   k.mode === "live"
-                    ? "bg-primary/20 text-primary border-l border-primary/30"
+                    ? "bg-primary/20 text-primary border border-primary/40 font-semibold shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 title="Live physical hardware telemetry mode"
@@ -351,17 +365,17 @@ export function TraceShell({ children }: { children: ReactNode }) {
                     k.mode === "live" ? "bg-primary animate-pulse" : "bg-muted-foreground",
                   )}
                 />
-                Live Hardware
+                Live
               </button>
             </div>
 
             {/* Gateway Status Badge */}
             <div
               className={cn(
-                "hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-medium",
+                "hidden sm:flex items-center gap-1.5 px-2.5 h-8 rounded-lg border text-xs font-medium shadow-xs",
                 k.gatewayConnected
-                  ? "border-success/30 bg-success/10 text-success"
-                  : "border-critical/30 bg-critical/10 text-critical",
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-400",
               )}
               title={
                 k.gatewayConnected
@@ -372,18 +386,18 @@ export function TraceShell({ children }: { children: ReactNode }) {
               <span
                 className={cn(
                   "h-1.5 w-1.5 rounded-full",
-                  k.gatewayConnected ? "bg-success" : "bg-critical",
+                  k.gatewayConnected ? "bg-emerald-400" : "bg-rose-400 animate-pulse",
                 )}
               />
-              <span>{k.gatewayConnected ? "Gateway Online" : "Gateway Offline"}</span>
+              <span className="whitespace-nowrap">{k.gatewayConnected ? "Gateway Online" : "Gateway Offline"}</span>
             </div>
 
-            {/* Backend & SSE Realtime Status Badge */}
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded border border-border bg-card text-[10px] font-medium">
+            {/* Backend & SSE Realtime Status Badge (visible on ultra-wide) */}
+            <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 h-8 rounded-lg border border-border/80 bg-card/70 text-[11px] font-medium shadow-xs">
               <span
                 className={cn(
                   "h-1.5 w-1.5 rounded-full",
-                  k.serverReady ? "bg-success" : "bg-critical",
+                  k.serverReady ? "bg-emerald-400" : "bg-rose-400",
                 )}
               />
               <span className="text-foreground/90">
@@ -402,7 +416,7 @@ export function TraceShell({ children }: { children: ReactNode }) {
             </div>
 
             {/* Real-time Clock */}
-            <div className="hidden lg:block px-2 py-1 rounded border border-border bg-card">
+            <div className="hidden xl:flex items-center px-2.5 h-8 rounded-lg border border-border/80 bg-card/70 shadow-xs">
               <Clock />
             </div>
 
@@ -503,7 +517,7 @@ export function TraceShell({ children }: { children: ReactNode }) {
                 <span className="w-5 h-5 rounded-full bg-primary/20 text-primary border border-primary/30 text-[10px] font-bold flex items-center justify-center">
                   {k.currentUser?.role ? k.currentUser.role.substring(0, 2).toUpperCase() : "OP"}
                 </span>
-                <span className="hidden sm:inline text-xs text-foreground/90 font-medium">
+                <span className="hidden lg:inline text-xs text-foreground/90 font-medium max-w-[110px] truncate">
                   {k.currentUser?.full_name || "Operator Console"}
                 </span>
                 <ChevronDown size={12} className="text-muted-foreground" />

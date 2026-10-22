@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as ApiDocsRouteImport } from './routes/api-docs'
+import { Route as CalibrationRouteImport } from './routes/calibration'
 import { Route as DetectionsRouteImport } from './routes/detections'
 import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as GatewayRouteImport } from './routes/gateway'
@@ -48,6 +49,11 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
 const ApiDocsRoute = ApiDocsRouteImport.update({
   id: '/api-docs',
   path: '/api-docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalibrationRoute = CalibrationRouteImport.update({
+  id: '/calibration',
+  path: '/calibration',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DetectionsRoute = DetectionsRouteImport.update({
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
   '/api-docs': typeof ApiDocsRoute
+  '/calibration': typeof CalibrationRoute
   '/detections': typeof DetectionsRoute
   '/devices': typeof DevicesRoute
   '/gateway': typeof GatewayRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
   '/api-docs': typeof ApiDocsRoute
+  '/calibration': typeof CalibrationRoute
   '/detections': typeof DetectionsRoute
   '/devices': typeof DevicesRoute
   '/gateway': typeof GatewayRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
   '/api-docs': typeof ApiDocsRoute
+  '/calibration': typeof CalibrationRoute
   '/detections': typeof DetectionsRoute
   '/devices': typeof DevicesRoute
   '/gateway': typeof GatewayRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/analytics'
     | '/api-docs'
+    | '/calibration'
     | '/detections'
     | '/devices'
     | '/gateway'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/analytics'
     | '/api-docs'
+    | '/calibration'
     | '/detections'
     | '/devices'
     | '/gateway'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/analytics'
     | '/api-docs'
+    | '/calibration'
     | '/detections'
     | '/devices'
     | '/gateway'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   AlertsRoute: typeof AlertsRoute
   AnalyticsRoute: typeof AnalyticsRoute
   ApiDocsRoute: typeof ApiDocsRoute
+  CalibrationRoute: typeof CalibrationRoute
   DetectionsRoute: typeof DetectionsRoute
   DevicesRoute: typeof DevicesRoute
   GatewayRoute: typeof GatewayRoute
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/api-docs'
       fullPath: '/api-docs'
       preLoaderRoute: typeof ApiDocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calibration': {
+      id: '/calibration'
+      path: '/calibration'
+      fullPath: '/calibration'
+      preLoaderRoute: typeof CalibrationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/detections': {
@@ -440,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   AlertsRoute: AlertsRoute,
   AnalyticsRoute: AnalyticsRoute,
   ApiDocsRoute: ApiDocsRoute,
+  CalibrationRoute: CalibrationRoute,
   DetectionsRoute: DetectionsRoute,
   DevicesRoute: DevicesRoute,
   GatewayRoute: GatewayRoute,

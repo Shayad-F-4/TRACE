@@ -136,13 +136,15 @@ function seedDefaultCalibrationProfiles(db: DatabaseSync): void {
   };
   if (!countRow || countRow.count === 0) {
     const now = Date.now();
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO calibration_profiles (
         id, name, ref_rssi, path_loss_exponent, rmse, r2, sample_count,
         distinct_distances, environment, frequency_mhz, tx_power_dbm,
         antenna_type, warnings_json, is_active, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-    `).run(
+    `,
+    ).run(
       "CAL-BASELINE-01",
       "Baseline Terrestrial Urban (868/915 MHz)",
       -45.0,

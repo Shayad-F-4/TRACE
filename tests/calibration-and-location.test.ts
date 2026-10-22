@@ -235,4 +235,3 @@ test("RF Path-Loss Calibration & Location Verification", async (t) => {
     assert.strictEqual(tlm.rssi, -62.5);
   });
 });
-

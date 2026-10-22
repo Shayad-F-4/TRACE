@@ -2,6 +2,7 @@ import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "
 import { Box, Crosshair, Map, X, ArrowRight, Play, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { useKavach } from "@/lib/kavach/store";
 import { MapCanvas, localXY, type Props } from "./MapCanvas";
 import type { SceneSelection } from "./DisasterScene";
@@ -29,44 +30,56 @@ export function TacticalScene(props: Props) {
   const signal = selection?.kind === "signal" ? k.signal : null;
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2 items-center justify-between">
-        <div className="flex gap-1" role="group" aria-label="Tactical view">
-          <Button
-            size="sm"
-            variant={k.sceneMode === "2d" ? "default" : "outline"}
+      <div className="flex flex-wrap gap-2 items-center justify-between px-1">
+        <div className="inline-flex p-0.5 rounded-lg bg-slate-900/90 border border-slate-700/70 shadow-xs" role="group" aria-label="Tactical view mode">
+          <button
+            type="button"
+            className={cn(
+              "h-7 px-3 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer",
+              k.sceneMode === "2d"
+                ? "bg-sky-500 text-slate-950 shadow-sm"
+                : "text-slate-300 hover:text-white hover:bg-slate-800/60",
+            )}
             onClick={() => k.setSceneMode("2d")}
           >
-            <Map />
-            2D
-          </Button>
-          <Button
-            size="sm"
-            variant={k.sceneMode === "3d" ? "default" : "outline"}
+            <Map size={13} />
+            2D Tactical
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "h-7 px-3 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer",
+              k.sceneMode === "3d"
+                ? "bg-sky-500 text-slate-950 shadow-sm"
+                : "text-slate-300 hover:text-white hover:bg-slate-800/60",
+            )}
             onClick={() => k.setSceneMode("3d")}
           >
-            <Box />
-            3D
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
+            <Box size={13} />
+            3D Structure
+          </button>
+          <button
+            type="button"
             title="Reset 3D camera"
             aria-label="Reset 3D camera"
+            className="h-7 w-7 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
             onClick={() => setReset((v) => v + 1)}
           >
-            <Crosshair />
-          </Button>
+            <Crosshair size={13} />
+          </button>
         </div>
-        <span className="trace-label text-warning">
-          {k.mode === "simulation"
-            ? `SIMULATION / ${k.scenario.toUpperCase()}`
-            : "HARDWARE / LOCAL GRID"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border border-warning/30 bg-warning/10 text-warning font-medium">
+            {k.mode === "simulation"
+              ? `SCENARIO: ${k.scenario.toUpperCase()}`
+              : "HARDWARE LOCAL DATUM"}
+          </span>
+        </div>
       </div>
       {k.sceneMode === "2d" ? (
         <MapCanvas {...props} />
       ) : (
-        <div className={`relative overflow-hidden ${props.className ?? "trace-map"}`}>
+        <div className={`relative overflow-hidden rounded-xl border border-slate-800/90 shadow-md ${props.className ?? "trace-map"}`}>
           {mounted && (
             <SceneBoundary
               fallback={
@@ -89,15 +102,17 @@ export function TacticalScene(props: Props) {
               </Suspense>
             </SceneBoundary>
           )}
-          <div className="absolute left-3 top-3 pointer-events-none">
-            <p className="trace-label">TRACE / SECTOR DELTA</p>
-            <p className="text-[10px] mt-1 text-info">
-              {k.mode === "simulation" ? "SIMULATED GATEWAY" : "GATEWAY UNVERIFIED"} ·{" "}
-              {k.gatewayConnected ? "TRANSPORT AVAILABLE" : "TRANSPORT UNAVAILABLE"}
+          <div className="absolute left-3 top-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-800/80 px-2.5 py-1.5 shadow-md">
+            <p className="text-[9px] font-mono tracking-wider font-semibold text-sky-400 uppercase">
+              TRACE · {k.incidents.find(i => i.id === k.incidentId)?.name ?? "SECTOR DELTA"}
+            </p>
+            <p className="text-[10px] font-mono text-slate-300 flex items-center gap-1.5 mt-0.5">
+              <span className={cn("h-1.5 w-1.5 rounded-full", k.gatewayConnected ? "bg-emerald-400" : "bg-rose-400 animate-pulse")} />
+              {k.mode === "simulation" ? "Simulated LoRa Bridge" : "Physical LoRa Bridge"} · {k.gatewayConnected ? "Connected" : "Disconnected"}
             </p>
           </div>
           {!k.zones.length && (
-            <p className="absolute bottom-3 left-3 right-3 text-[11px] text-warning pointer-events-none">
+            <p className="absolute bottom-3 left-3 right-3 text-[11px] text-warning pointer-events-none rounded bg-slate-950/80 backdrop-blur-xs p-1.5 border border-warning/30">
               {k.estimationMessage}
             </p>
           )}

@@ -4,14 +4,18 @@ TRACE is a disaster-response research and tactical operations platform designed 
 
 ---
 
-## 1. System Navigation: 4 Essential Tactical Sections
+## 1. Primary Operational Workspaces (6 Sections)
 
-TRACE has been consolidated into four clean, functional workspaces:
+TRACE provides a clean, focused operational hierarchy for emergency responders:
 
-1. **COMMAND CENTER (`/`)**: Tactical HUD showing active incident status, disaster area, live/simulation data modes, last received telemetry, gateway and sniffer counts, heuristic search zone estimates, and dynamic **Recommended Next Action** guidance.
-2. **LIVE MAP (`/map`)**: Full-screen 2D tactical disaster map with uniform 1:1 metric projection, true geometric circular uncertainty regions, interactive coordinate inspector with exact GPS decimal degrees and distance/bearing from Command Center, antenna coverage circles, and spatial layer toggles.
-3. **DEVICES & CALIBRATION (`/devices`)**: Unified workspace combining hardware gateway concentrator diagnostics, companion serial daemon quickstart, sniffer station inventory, and an interactive 4-step **RF Path-Loss Calibration Wizard** with closed-form OLS regression and versioned profile persistence.
-4. **INCIDENT HISTORY (`/history`)**: Operational audit trail, chronological incident timelines, historical multilateration runs with GDOP and residual errors, searchable system audit logs, and sanitized RFC-4180 CSV export.
+1. **COMMAND CENTER (`/`)**: Tactical operational dashboard displaying incident state, hardware connectivity, online sensor nodes, recent observations, and defensible operational next actions.
+2. **LIVE MAP (`/map`)**: Interactive 2D tactical map and 3D building/rubble view with metric projection, true geometric uncertainty circles, antenna coverage, coordinate inspection, and spatial layer toggles.
+3. **DEVICES & SIGNALS (`/devices`)**: Hardware gateway concentrator monitoring, sniffer diagnostics, live signal feed, and station inventory.
+4. **CALIBRATION (`/calibration`)**: Dedicated 4-step RF Path-Loss Calibration Wizard implementing closed-form OLS linear regression ($A_0$, $n$, $R^2$, RMSE, residuals) with database persistence.
+5. **INCIDENT HISTORY (`/history`)**: Operational audit trail, chronological incident timelines, historical multilateration runs with GDOP and residual errors, and sanitized RFC-4180 CSV export.
+6. **SETTINGS & HARDWARE (`/settings`)**: Hardware bridge configuration, Web Serial, daemon settings, and simulation lab workbench.
+
+Secondary views (Incidents Registry `/incidents`, Signal Detections `/detections`, Survivors Registry `/survivors`, Rescue Operations `/operations`, Sensor Nodes `/nodes`, Gateway Concentrator `/gateway`, Topology `/topology`, Analytics `/analytics`, Logs `/logs`, Reports `/reports`, Alerts `/alerts`, Health `/health`, API Docs `/api-docs`, Hardware Setup `/hardware`) are accessible via the Secondary Modules drawer.
 
 ---
 
@@ -19,13 +23,19 @@ TRACE has been consolidated into four clean, functional workspaces:
 
 Detailed engineering documentation is maintained in the `docs/` directory:
 
-- [**Telemetry Protocol Specification (`docs/TELEMETRY_PROTOCOL.md`)**](docs/TELEMETRY_PROTOCOL.md): Versioned JSON packet envelope (v2.4), field boundaries, validation rules, and duplicate detection.
-- [**RF Path-Loss Calibration Guide (`docs/RF_CALIBRATION.md`)**](docs/RF_CALIBRATION.md): Log-distance path-loss mathematical model, OLS closed-form solver, goodness-of-fit diagnostics ($A_0, n, \text{RMSE}, R^2$), and field procedures.
+- [**System Architecture (`docs/ARCHITECTURE.md`)**](docs/ARCHITECTURE.md): Complete pipeline specification from ESP32 sensor nodes to tactical command visualization.
+- [**Hardware Inventory & Board Assignments (`docs/HARDWARE_INVENTORY.md`)**](docs/HARDWARE_INVENTORY.md): Roles, pinouts, radios, and verification status for the three ESP32 boards.
 - [**Hardware Integration Guide (`docs/HARDWARE_INTEGRATION.md`)**](docs/HARDWARE_INTEGRATION.md): Physical ESP32 + SX1262 LoRa concentrator architecture, companion daemon setup, and pinout wiring reference.
-- [**Arduino & ESP32 Firmware Setup (`docs/ARDUINO_SETUP.md`)**](docs/ARDUINO_SETUP.md): Arduino IDE & PlatformIO configuration, library dependencies (`RadioLib`, `ArduinoJson`, `NimBLE`), and firmware sketches for gateway and sniffer nodes.
+- [**Arduino & ESP32 Firmware Setup (`docs/ARDUINO_SETUP.md`)**](docs/ARDUINO_SETUP.md): Arduino IDE & PlatformIO configuration, library dependencies (`RadioLib`, `ArduinoJson`, `NimBLE`), and firmware sketches for gateway, sniffer, and beacon.
+- [**Telemetry Protocol Specification (`docs/TELEMETRY_PROTOCOL.md`)**](docs/TELEMETRY_PROTOCOL.md): Versioned JSON packet envelope (v2.0), field boundaries, validation rules, and duplicate detection.
 - [**Localization Model Specification (`docs/LOCALIZATION_MODEL.md`)**](docs/LOCALIZATION_MODEL.md): Weighted least-squares multilateration algorithm, GDOP formulation, collinearity rejection, and search-priority zone derivation.
+- [**RF Path-Loss Calibration Guide (`docs/RF_CALIBRATION.md`)**](docs/RF_CALIBRATION.md): Log-distance path-loss mathematical model, OLS closed-form solver, goodness-of-fit diagnostics ($A_0, n, \text{RMSE}, R^2$), and field procedures.
+- [**Database Architecture (`docs/DATABASE.md`)**](docs/DATABASE.md): SQLite schema (17 tables), WAL mode, migrations, indexing, and seed records.
+- [**REST API & SSE Specification (`docs/API.md`)**](docs/API.md): Endpoints, schemas, validation rules, and real-time Server-Sent Events.
+- [**Simulation Engine Guide (`docs/SIMULATION.md`)**](docs/SIMULATION.md): 10 operational scenario presets and strict data isolation policies.
 - [**Troubleshooting & Diagnostics (`docs/TROUBLESHOOTING.md`)**](docs/TROUBLESHOOTING.md): Remediation steps for map coordinates, COM port locks, baud mismatches, and calibration errors.
-- [**Live Demonstration Checklist (`docs/LIVE_DEMO_CHECKLIST.md`)**](docs/LIVE_DEMO_CHECKLIST.md): Step-by-step 5-step operational demonstration guide for field teams and evaluators.
+- [**Hardware Test Checklist (`docs/HARDWARE_TEST_CHECKLIST.md`)**](docs/HARDWARE_TEST_CHECKLIST.md): Step-by-step physical commissioning checklist for ESP32 hardware.
+- [**Live Demonstration Checklist (`docs/LIVE_DEMO_CHECKLIST.md`)**](docs/LIVE_DEMO_CHECKLIST.md): Step-by-step operational demonstration guide for field teams and evaluators.
 
 ---
 

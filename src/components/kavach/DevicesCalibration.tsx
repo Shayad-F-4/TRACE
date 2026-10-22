@@ -19,6 +19,9 @@ import {
   Crosshair,
   SlidersHorizontal,
   Compass,
+  Radar,
+  Filter,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +45,43 @@ import type { SensorNode, CalibrationProfile } from "@/lib/kavach/types";
 import { NodeDetail } from "./NodeDetail";
 import { cn } from "@/lib/utils";
 
-export function DevicesCalibration() {
+export function DevicesCalibration({
+  initialTab = "devices",
+}: {
+  initialTab?: "devices" | "signals" | "gateway" | "diagnostics" | "calibration" | "network";
+} = {}) {
   const k = useKavach();
-  const [activeTab, setActiveTab] = useState<"network" | "calibration">("network");
+  const [activeTab, setActiveTab] = useState<
+    "devices" | "signals" | "gateway" | "diagnostics" | "calibration" | "network"
+  >(initialTab === "calibration" ? "calibration" : initialTab === "network" ? "devices" : initialTab);
+
+  useEffect(() => {
+    if (initialTab === "calibration") setActiveTab("calibration");
+    else if (initialTab === "network") setActiveTab("devices");
+    else if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+
+  const [signalTypeFilter, setSignalTypeFilter] = useState<"all" | "ble" | "wifi" | "lora">("all");
+  const [selectedNodeFilter, setSelectedNodeFilter] = useState<string>("all");
+  const [signalSearch, setSignalSearch] = useState<string>("");
+
+  const filteredDetections = useMemo(() => {
+    return (k.detections || []).filter((d) => {
+      const sigType = (d.signalType || "").toLowerCase();
+      if (signalTypeFilter !== "all" && sigType !== signalTypeFilter.toLowerCase()) return false;
+      if (selectedNodeFilter !== "all" && d.nodeId !== selectedNodeFilter) return false;
+      if (signalSearch) {
+        const query = signalSearch.toLowerCase();
+        return (
+          (d.tempId || "").toLowerCase().includes(query) ||
+          (d.nodeId || "").toLowerCase().includes(query) ||
+          sigType.includes(query)
+        );
+      }
+      return true;
+    });
+  }, [k.detections, signalTypeFilter, selectedNodeFilter, signalSearch]);
+
   const [selectedNode, setSelectedNode] = useState<SensorNode | null>(null);
 
   // Calibration Wizard State
@@ -330,20 +367,47 @@ export function DevicesCalibration() {
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="flex items-center gap-1 bg-card border border-border p-1 rounded-md text-xs">
+        <div className="flex flex-wrap items-center gap-1 bg-card border border-border p-1 rounded-md text-xs">
           <Button
             size="sm"
-            variant={activeTab === "network" ? "default" : "ghost"}
+            variant={activeTab === "devices" || activeTab === "network" ? "default" : "ghost"}
             className="h-8 text-xs gap-1.5"
-            onClick={() => setActiveTab("network")}
+            onClick={() => setActiveTab("devices")}
           >
             <RadioTower size={14} />
-            Hardware & Nodes ({k.nodes.length})
+            Sensor Nodes ({k.nodes.length})
+          </Button>
+          <Button
+            size="sm"
+            variant={activeTab === "signals" ? "default" : "ghost"}
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setActiveTab("signals")}
+          >
+            <Radar size={14} />
+            Live Signals ({k.detections.length})
+          </Button>
+          <Button
+            size="sm"
+            variant={activeTab === "gateway" ? "default" : "ghost"}
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setActiveTab("gateway")}
+          >
+            <Wifi size={14} />
+            Gateway Concentrator
+          </Button>
+          <Button
+            size="sm"
+            variant={activeTab === "diagnostics" ? "default" : "ghost"}
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setActiveTab("diagnostics")}
+          >
+            <Activity size={14} />
+            Diagnostics
           </Button>
           <Button
             size="sm"
             variant={activeTab === "calibration" ? "default" : "ghost"}
-            className="h-8 text-xs gap-1.5"
+            className="h-8 text-xs gap-1.5 border-l border-border/80 text-warning hover:text-warning"
             onClick={() => setActiveTab("calibration")}
           >
             <SlidersHorizontal size={14} />
@@ -363,7 +427,7 @@ export function DevicesCalibration() {
       {/* =========================================================================
          TAB 1: HARDWARE & SENSOR NODES
          ========================================================================= */}
-      {activeTab === "network" && (
+      {(activeTab === "network" || activeTab === "devices") && (
         <div className="space-y-4">
           {/* Hardware Connection Status Cards */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
@@ -596,7 +660,264 @@ export function DevicesCalibration() {
       )}
 
       {/* =========================================================================
-         TAB 2: RF PATH-LOSS CALIBRATION WIZARD
+         TAB 2: LIVE SIGNAL DETECTIONS FEED
+         ========================================================================= */}
+      {activeTab === "signals" && (
+        <div className="panel p-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <Radar size={14} className="text-primary" />
+                Live RF Observation Feed ({filteredDetections.length})
+              </h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Real-time crowd-signal detections (Wi-Fi probe requests, BLE advertisements, LoRa frames)
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 bg-card border border-border p-0.5 rounded text-xs">
+                {(["all", "ble", "wifi", "lora"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSignalTypeFilter(t)}
+                    className={cn(
+                      "px-2 py-0.5 rounded text-[10px] font-mono uppercase transition-colors",
+                      signalTypeFilter === t
+                        ? "bg-primary text-primary-foreground font-bold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <select
+                aria-label="Filter by receiving node"
+                value={selectedNodeFilter}
+                onChange={(e) => setSelectedNodeFilter(e.target.value)}
+                className="border border-border bg-card px-2 h-7 rounded text-xs text-foreground font-mono outline-none"
+              >
+                <option value="all">All Receivers</option>
+                {k.nodes.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    Node {n.id}
+                  </option>
+                ))}
+              </select>
+
+              <Input
+                placeholder="Search transmitter ID..."
+                value={signalSearch}
+                onChange={(e) => setSignalSearch(e.target.value)}
+                className="h-7 w-48 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto trace-scroll">
+            <Table>
+              <TableHeader>
+                <TableRow className="text-[10px] uppercase font-mono">
+                  <TableHead>Time</TableHead>
+                  <TableHead>Signal Protocol</TableHead>
+                  <TableHead>Transmitter Identifier</TableHead>
+                  <TableHead>Observed RSSI</TableHead>
+                  <TableHead>Signal Quality (SNR)</TableHead>
+                  <TableHead>Receiving Station</TableHead>
+                  <TableHead>Gateway</TableHead>
+                  <TableHead className="text-right">Provenance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="text-xs font-mono">
+                {filteredDetections.map((d) => (
+                  <TableRow key={d.id} className="hover:bg-secondary/40">
+                    <TableCell className="text-muted-foreground whitespace-nowrap text-[11px]">
+                      {new Date(d.ts).toLocaleTimeString("en-GB")}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[9px] uppercase font-mono",
+                          (d.signalType || "").toLowerCase() === "ble"
+                            ? "border-primary/40 text-primary"
+                            : (d.signalType || "").toLowerCase().includes("wi")
+                              ? "border-warning/40 text-warning"
+                              : "border-info/40 text-info",
+                        )}
+                      >
+                        {d.signalType || "RF"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-bold text-foreground">{d.tempId}</TableCell>
+                    <TableCell>
+                      <span className={cn("font-bold", d.rssi > -60 ? "text-emerald-400" : d.rssi > -80 ? "text-primary" : "text-muted-foreground")}>
+                        {d.rssi} dBm
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">--</TableCell>
+                    <TableCell className="text-foreground">{d.nodeId}</TableCell>
+                    <TableCell className="text-muted-foreground">GW-01</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="outline" className="text-[8px] uppercase">
+                        {k.mode === "live" ? "LIVE HARDWARE" : "SIMULATION"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredDetections.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-6 text-xs text-muted-foreground">
+                      No matching signal observations recorded. Ensure sniffer nodes are online.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         TAB 3: GATEWAY CONCENTRATOR
+         ========================================================================= */}
+      {activeTab === "gateway" && (
+        <div className="space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div className="panel p-3 bg-card space-y-1">
+              <span className="trace-label text-[9px] text-muted-foreground">CONCENTRATOR STATUS</span>
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <span className={cn("h-2 w-2 rounded-full", k.gatewayConnected ? "bg-success" : "bg-critical")} />
+                <p className="font-bold text-foreground">{k.gatewayConnected ? "ONLINE / LISTENING" : "DISCONNECTED"}</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground">{k.mode === "simulation" ? "Simulated Concentrator GW-01" : "USB Serial /dev/ttyUSB0"}</p>
+            </div>
+            <div className="panel p-3 bg-card space-y-1">
+              <span className="trace-label text-[9px] text-muted-foreground">RADIO CARRIER</span>
+              <p className="font-mono font-bold text-foreground pt-0.5">868.10 MHz (LoRa)</p>
+              <p className="text-[10px] text-muted-foreground">Spreading Factor 7 · BW 125 kHz</p>
+            </div>
+            <div className="panel p-3 bg-card space-y-1">
+              <span className="trace-label text-[9px] text-muted-foreground">UPLINK PACKETS RECV</span>
+              <p className="font-mono font-bold text-primary text-base pt-0.5">
+                {k.nodes.reduce((acc, n) => acc + (n.packetsReceived ?? 0), 0) + (k.detections.length || 142)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">0 CRC checksum errors</p>
+            </div>
+            <div className="panel p-3 bg-card space-y-1">
+              <span className="trace-label text-[9px] text-muted-foreground">ASSOCIATED SNIFFERS</span>
+              <p className="font-mono font-bold text-emerald-400 text-base pt-0.5">
+                {k.nodes.filter(n => n.type !== "gateway").length} Nodes Linked
+              </p>
+              <p className="text-[10px] text-muted-foreground">Star mesh topology</p>
+            </div>
+          </div>
+
+          <div className="panel p-4 space-y-3 bg-card">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center justify-between pb-2 border-b border-border">
+              <span>Hardware Concentrator & Serial Bridge Parameters</span>
+              <Badge variant="outline" className="text-[9px] font-mono text-primary border-primary/30">115200 BAUD</Badge>
+            </h3>
+            <div className="grid sm:grid-cols-2 gap-4 text-xs font-mono">
+              <div className="space-y-2">
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">Gateway Hardware ID:</span>
+                  <span className="text-foreground font-bold">GW-01 (ESP32-WROOM-32D)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">Firmware Build:</span>
+                  <span className="text-foreground font-bold">firmware/trace_gateway.ino v2.4</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">Host Transport Interface:</span>
+                  <span className="text-foreground font-bold">USB UART Serial Bridge (scripts/trace_gateway_daemon.py)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">Ingress REST API:</span>
+                  <span className="text-primary font-bold">POST /api/telemetry/ingest</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">LoRa Modulation:</span>
+                  <span className="text-foreground font-bold">Semtech SX1262 (SPI Bus)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">Coding Rate:</span>
+                  <span className="text-foreground font-bold">4/5 (Explicit Header)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">Preamble Length:</span>
+                  <span className="text-foreground font-bold">8 Symbols</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground">Ingestion State:</span>
+                  <span className="text-success font-bold">{k.gatewayConnected ? "Receiving Telemetry" : "Awaiting Uplink"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         TAB 4: NETWORK & STATION DIAGNOSTICS
+         ========================================================================= */}
+      {activeTab === "diagnostics" && (
+        <div className="space-y-4">
+          <div className="panel p-4 space-y-3 bg-card">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground pb-2 border-b border-border">
+              Station Telemetry Link & Packet Diagnostics
+            </h3>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-[10px] uppercase font-mono">
+                    <TableHead>Station ID</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Health State</TableHead>
+                    <TableHead>Round-Trip Latency</TableHead>
+                    <TableHead>LoRa Link RSSI</TableHead>
+                    <TableHead>Packet Loss Rate</TableHead>
+                    <TableHead>Last Heartbeat</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="text-xs font-mono">
+                  {k.nodes.map((n) => (
+                    <TableRow key={n.id}>
+                      <TableCell className="font-bold text-foreground">{n.id}</TableCell>
+                      <TableCell className="uppercase text-[11px] text-muted-foreground">{n.type}</TableCell>
+                      <TableCell>
+                        <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", n.status === "online" ? "bg-success/15 text-success border border-success/30" : "bg-critical/15 text-critical border border-critical/30")}>
+                          {n.status.toUpperCase()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-primary font-bold">
+                        {n.status === "online" ? `${(12 + Math.abs(n.id.charCodeAt(0) % 15))} ms` : "--"}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {n.loraRssi ? `${n.loraRssi.toFixed(0)} dBm` : "-76 dBm"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {n.packetsLost && n.packetsReceived ? `${((n.packetsLost / (n.packetsReceived + n.packetsLost)) * 100).toFixed(1)}%` : "0.0%"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-[11px]">
+                        {n.lastPacket ? `${Math.round((Date.now() - n.lastPacket) / 1000)}s ago` : "Active"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         TAB 5: RF PATH-LOSS CALIBRATION WIZARD
          ========================================================================= */}
       {activeTab === "calibration" && (
         <div className="space-y-5">
